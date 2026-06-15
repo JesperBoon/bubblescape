@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="anthropic-key" content="">
+<title>Bubblescape — Dutch TikTok Information Bubbles</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #777;
+    --amber: #f59e0b;
+    --purple-fill: #7c6ef7;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  #breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  #breadcrumb span { color: var(--text); }
+  #breadcrumb .sep { color: var(--border); }
+
+  #header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  #meta-bar {
+    font-size: 11px;
+    color: #444;
+    white-space: nowrap;
+  }
+
+  .header-btn {
+    padding: 5px 11px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .header-btn:hover { color: var(--text); border-color: #555; }
+  .header-btn.active { color: var(--text); border-color: #666; background: #1f1f1f; }
+
+  #back-btn { display: none; }
+  #back-btn.visible { display: flex; align-items: center; gap: 4px; }
+
+  /* ── Canvas ── */
+  #canvas {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #canvas svg { width: 100%; height: 100%; }
+
+  /* ── Tooltip ── */
+  #tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    max-width: 240px;
+    line-height: 1.6;
+    opacity: 0;
+    transition: opacity 0.12s;
+    z-index: 100;
+  }
+  #tooltip.visible { opacity: 1; }
+  #tooltip strong { display: block; font-size: 13px; margin-bottom: 4px; color: var(--text); }
+  #tooltip .muted { color: var(--muted); }
+
+  /* ── Level 3: account grid ── */
+  #account-grid {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    overflow: hidden;
+    z-index: 10;
+  }
+  #account-grid.visible { display: flex; }
+
+  #grid-header {
+    padding: 18px 28px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #grid-header h2 { font-size: 16px; font-weight: 600; }
+  #grid-header p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  #grid-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 28px 28px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  #grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .account-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    transition: border-color 0.15s;
+  }
+  .account-card:hover { border-color: #444; }
+
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+  .card-username { font-weight: 600; font-size: 13px; }
+  .card-display { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  .card-followers { font-size: 11px; color: var(--muted); }
+
+  .bridge-badge {
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--amber);
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  .card-bio {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 8px 0;
+    line-height: 1.5;
+    min-height: 16px;
+  }
+
+  .fit-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .fit-label { font-size: 10px; color: var(--muted); width: 60px; flex-shrink: 0; }
+  .fit-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .fit-fill { height: 100%; background: var(--purple-fill); border-radius: 2px; }
+  .fit-value { font-size: 10px; color: var(--muted); width: 28px; text-align: right; }
+
+  .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .tag { font-size: 10px; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); color: var(--muted); }
+
+  .bubble-circle { cursor: pointer; transition: opacity 0.15s; }
+  .bubble-circle:hover { opacity: 0.85; }
+  .sub-circle { cursor: pointer; }
+  .cluster-label { pointer-events: none; }
+
+  /* ── Edge arcs ── */
+  .edge-arc {
+    fill: none;
+    stroke: #ffffff;
+    stroke-opacity: 0.12;
+    pointer-events: none;
+  }
+
+  .edge-arc-label {
+    font-size: 10px;
+    fill: #555;
+    pointer-events: none;
+    text-anchor: middle;
+  }
+
+  /* ── Search bar ── */
+  #search-wrapper {
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  #search-wrapper.hidden { display: none; }
+
+  #api-key-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 24px;
+    border-bottom: 1px solid var(--border);
+    background: #111;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  #api-key-bar.visible { display: flex; }
+  #api-key-bar input {
+    flex: 1;
+    max-width: 320px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: monospace;
+  }
+  #api-key-bar input:focus { outline: none; border-color: #555; }
+  #api-key-bar button {
+    padding: 5px 12px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #api-key-bar button:hover { border-color: #555; }
+
+  #search-bar { display: flex; align-items: center; gap: 10px; padding: 10px 24px; }
+
+  #search-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-size: 13px;
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  #search-input::placeholder { color: #444; }
+  #search-input:focus { outline: none; border-color: #555; }
+
+  #search-btn {
+    padding: 9px 18px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s;
+  }
+  #search-btn:hover { border-color: #666; }
+  #search-btn:disabled { opacity: 0.4; cursor: default; }
+
+  #search-clear {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  #search-clear:hover { color: var(--text); }
+  #search-clear.visible { display: block; }
+
+  #search-spinner {
+    display: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--muted);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  #search-spinner.visible { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #mode-hint {
+    font-size: 11px;
+    color: #555;
+    padding: 0 24px 8px;
+    transition: color 0.2s;
+  }
+  #mode-hint.hypothese { color: var(--amber); }
+
+  /* ── Finder panel ── */
+  #finder-panel {
+    position: fixed;
+    top: 0; right: 0;
+    width: 320px;
+    height: 100vh;
+    background: #111;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+    overflow: hidden;
+  }
+  #finder-panel.open { transform: translateX(0); }
+
+  #finder-close {
+    position: absolute;
+    top: 12px; right: 14px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px;
+  }
+  #finder-close:hover { color: var(--text); }
+
+  #finder-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 20px 28px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .finder-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .finder-cluster-name {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .finder-color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .finder-confidence { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  .finder-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  .finder-sub strong { color: var(--text); font-weight: 500; }
+  .finder-section { margin-bottom: 18px; }
+  .finder-section-label {
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .finder-why { font-size: 13px; line-height: 1.6; color: var(--text); }
+
+  .finder-blindspot-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+  .finder-blindspot-list li { font-size: 12px; color: #999; line-height: 1.5; display: flex; align-items: flex-start; gap: 7px; }
+  .finder-blindspot-list li::before { content: "×"; color: #555; font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+
+  .finder-bridges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .finder-bridge-pill {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    background: #1a1400;
+    border: 1px solid #4a3a00;
+    color: var(--amber);
+  }
+
+  .finder-summary {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-top: 4px;
+  }
+
+  #finder-explore-btn {
+    margin: 0 20px 16px;
+    padding: 10px 16px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    width: calc(100% - 40px);
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.15s;
+    flex-shrink: 0;
+  }
+  #finder-explore-btn:hover { border-color: #555; }
+
+  #finder-disclaimer {
+    font-size: 10px;
+    color: #444;
+    padding: 0 20px 16px;
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+
+  /* ── Pulse animation ── */
+  @keyframes bubblePulse {
+    0%   { stroke-width: 3;  stroke-opacity: 0.85; }
+    50%  { stroke-width: 16; stroke-opacity: 0.1;  }
+    100% { stroke-width: 3;  stroke-opacity: 0.85; }
+  }
+  .pulse-ring { pointer-events: none; fill: none; animation: bubblePulse 2s ease-in-out infinite; }
+
+  /* ── Verdict badges ── */
+  .verdict-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .verdict-BEVESTIGD   { background: #0d2e1a; color: #34d399; border: 1px solid #166534; }
+  .verdict-GEDEELTELIJK { background: #2d1f00; color: #f59e0b; border: 1px solid #92400e; }
+  .verdict-ONTKRACHT   { background: #2d0d0d; color: #f87171; border: 1px solid #991b1b; }
+
+  .verdict-score-bar { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 14px; overflow: hidden; }
+  .verdict-score-fill { height: 100%; border-radius: 2px; }
+
+  .finder-bewijs-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+  .finder-bewijs-list li { font-size: 12px; color: #999; line-height: 1.5; display: flex; align-items: flex-start; gap: 7px; }
+  .finder-bewijs-list li::before { content: "→"; color: #555; font-size: 10px; flex-shrink: 0; margin-top: 2px; }
+
+  .finder-nuance {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+    line-height: 1.6;
+    padding: 8px 10px;
+    border-left: 2px solid var(--border);
+    margin-top: 4px;
+  }
+
+  /* ── Legend ── */
+  #legend {
+    position: absolute;
+    bottom: 20px;
+    right: 24px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+  }
+  .legend-row { display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-amber { background: var(--amber); }
+  .legend-ring { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--amber); background: transparent; flex-shrink: 0; }
+  .legend-line { width: 16px; height: 1px; background: #ffffff30; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>Bubblescape</h1>
+    <div id="breadcrumb">
+      <span id="bc-root" style="cursor:pointer" data-i18n="rootCrumb">Nederlands TikTok</span>
+    </div>
+    <div id="header-right">
+      <span id="meta-bar"></span>
+      <button class="header-btn" id="edge-btn" onclick="toggleEdgeView()" data-i18n-title-on="edgeBtnOff" data-i18n-title-off="edgeBtnOn">Verbindingen</button>
+      <button class="header-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+      <button class="header-btn" id="back-btn" data-i18n="back">← Terug</button>
+    </div>
+  </header>
+
+  <!-- Bubble Finder search -->
+  <div id="search-wrapper">
+    <div id="api-key-bar">
+      <span data-i18n="apiKeyPrompt">Anthropic API-sleutel nodig voor Bubble Finder:</span>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off">
+      <button id="api-key-save" data-i18n="apiKeySave">Opslaan</button>
+    </div>
+    <div id="search-bar">
+      <input type="text" id="search-input" autocomplete="off">
+      <div id="search-spinner"></div>
+      <button id="search-clear" title="Clear">×</button>
+      <button id="search-btn" data-i18n="analyzeBtn">Analyseer →</button>
+    </div>
+    <div id="mode-hint"></div>
+  </div>
+
+  <div id="canvas">
+    <svg id="svg"></svg>
+    <div id="tooltip"></div>
+    <div id="legend">
+      <div class="legend-row"><div class="legend-ring legend-amber"></div> <span data-i18n="legendBridge">bridge account</span></div>
+      <div class="legend-row" id="legend-edge-row" style="display:none"><div class="legend-line"></div> <span data-i18n="legendEdge">connections</span></div>
+      <div class="legend-row" style="opacity:0.5;font-size:10px"><span data-i18n="legendOpacity">opacity = density</span></div>
+    </div>
+    <div id="account-grid">
+      <div id="grid-header">
+        <h2 id="grid-title"></h2>
+        <p id="grid-meta"></p>
+      </div>
+      <div id="grid-scroll"><div id="grid-cards"></div></div>
+    </div>
+  </div>
+
+  <!-- Finder result panel -->
+  <div id="finder-panel">
+    <button id="finder-close" title="Close">×</button>
+    <div id="finder-scroll"></div>
+    <button id="finder-explore-btn" style="display:none">
+      <span data-i18n="exploreBtn">Verken deze bubbel</span><span>→</span>
+    </button>
+    <div id="finder-disclaimer" data-i18n="disclaimer">
+      Dit is een schatting op basis van hashtag-patronen van Nederlandse TikTok-accounts.
+    </div>
+  </div>
+
+</div>
+
+<script src="bubble_finder.js"></script>
+<script>
+
+// ══════════════════════════════════════════════════════════════════════════════
+// i18n
+// ══════════════════════════════════════════════════════════════════════════════
+
+const LANG = {
+  nl: {
+    rootCrumb:       "Nederlands TikTok",
+    back:            "← Terug",
+    analyzeBtn:      "Analyseer →",
+    edgeBtnOn:       "Verbindingen",
+    edgeBtnOff:      "Verbindingen ✓",
+    apiKeyPrompt:    "Anthropic API-sleutel nodig voor Bubble Finder:",
+    apiKeySave:      "Opslaan",
+    searchPlaceholder: "Beschrijf een groep mensen — of stel een hypothese over een bubbel…",
+    modeHintDefault: "Tip: eindig met een vraagteken voor hypothese-validatie",
+    modeHintHyp:     "✦ Hypothese-modus — valideer of dit klopt in de data",
+    legendBridge:    "bridge account",
+    legendEdge:      "verbindingen",
+    legendOpacity:   "opacity = dichtheid",
+    exploreBtn:      "Verken deze bubbel",
+    disclaimer:      "Schatting op basis van hashtag-patronen van Nederlandse TikTok-accounts.",
+    fitLabel:        "bubbel fit",
+    bridgeBadge:     "BRIDGE",
+    noMatch:         "Geen match gevonden",
+    noMatchTip:      "Tip: probeer een specifiekere beschrijving — benoem concrete onderwerpen, partijen of hashtags.",
+    errorLabel:      "Fout",
+    foundLabel:      "Bubbel gevonden",
+    certainty:       "zekerheid",
+    whyLabel:        "Waarom deze bubbel",
+    blindLabel:      "Wat ze niet zien",
+    bridgesLabel:    "Bruggen naar andere werelden",
+    hypLabel:        "Hypothese-analyse",
+    reasonLabel:     "Redenering",
+    evidenceLabel:   "Bewijs in de data",
+    nuanceLabel:     "Nuance",
+    clustersLabel:   "Betrokken bubbels",
+    spanningLabel:   "Verdeeld over meerdere bubbels",
+    spanningDesc:    "Deze combinatie bestaat niet als één coherente bubbel in de data. De aspecten leven apart.",
+    foundInData:     "Gevonden in de data",
+    notFoundData:    "Niet gevonden",
+    notFoundNote:    "— niet gevonden in de data",
+    verdictLabels:   { BEVESTIGD: "✓ Bevestigd", GEDEELTELIJK: "~ Gedeeltelijk", ONTKRACHT: "✗ Ontkracht" },
+  },
+  en: {
+    rootCrumb:       "Dutch TikTok",
+    back:            "← Back",
+    analyzeBtn:      "Analyze →",
+    edgeBtnOn:       "Connections",
+    edgeBtnOff:      "Connections ✓",
+    apiKeyPrompt:    "Anthropic API key required for Bubble Finder:",
+    apiKeySave:      "Save",
+    searchPlaceholder: "Describe a group of people — or pose a hypothesis about a bubble…",
+    modeHintDefault: "Tip: end with a question mark for hypothesis validation",
+    modeHintHyp:     "✦ Hypothesis mode — validating this against the data",
+    legendBridge:    "bridge account",
+    legendEdge:      "connections",
+    legendOpacity:   "opacity = density",
+    exploreBtn:      "Explore this bubble",
+    disclaimer:      "Estimate based on hashtag patterns from Dutch TikTok accounts.",
+    fitLabel:        "bubble fit",
+    bridgeBadge:     "BRIDGE",
+    noMatch:         "No match found",
+    noMatchTip:      "Tip: try a more specific description — mention topics, parties, or hashtags.",
+    errorLabel:      "Error",
+    foundLabel:      "Bubble found",
+    certainty:       "confidence",
+    whyLabel:        "Why this bubble",
+    blindLabel:      "What they don't see",
+    bridgesLabel:    "Bridges to other worlds",
+    hypLabel:        "Hypothesis analysis",
+    reasonLabel:     "Reasoning",
+    evidenceLabel:   "Evidence in the data",
+    nuanceLabel:     "Nuance",
+    clustersLabel:   "Bubbles involved",
+    spanningLabel:   "Split across multiple bubbles",
+    spanningDesc:    "This combination doesn't exist as a single coherent bubble. The aspects live separately.",
+    foundInData:     "Found in the data",
+    notFoundData:    "Not found",
+    notFoundNote:    "— not found in the data",
+    verdictLabels:   { BEVESTIGD: "✓ Confirmed", GEDEELTELIJK: "~ Partial", ONTKRACHT: "✗ Refuted" },
+  },
+};
+
+// Cluster name translations (keyed by cluster/subcluster id)
+const NAMES = {
+  nl: {
+    "1":  "Gewoon Nederlands TikTok",
+    "1a": "Moslimjongeren en religieuze leefstijl",
+    "1b": "Amsterdam, geschiedenis en Nederlandse trots",
+    "1c": "Asiel en migratie in het nieuws",
+    "1d": "Liverpool-fans en internationale voetbalbubbel",
+    "2":  "Politiek betrokken Nederland",
+    "2a": "Islamkritisch en anti-EU",
+    "2b": "Lokale politiek en partijen",
+    "2c": "Maatschappelijk ongenoegen en protest",
+    "3":  "Gevestigde media en officiële kanalen",
+    "3a": "Vlaamse media in Nederland",
+    "3b": "Nieuws en sportmedia",
+  },
+  en: {
+    "1":  "Mainstream Dutch TikTok",
+    "1a": "Muslim Youth & Religious Lifestyle",
+    "1b": "Amsterdam, History & Dutch Pride",
+    "1c": "Asylum & Migration News",
+    "1d": "Liverpool Fans & International Football",
+    "2":  "Politically Engaged Netherlands",
+    "2a": "Islam-Critical & Anti-EU",
+    "2b": "Local Politics & Parties",
+    "2c": "Social Discontent & Protest",
+    "3":  "Established Media & Official Channels",
+    "3a": "Flemish Media in the Netherlands",
+    "3b": "News & Sports Media",
+  },
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+
+let currentLang = 'nl';
+let showEdges   = false;
+let DATA        = null;
+let GRAPH_DATA  = null;
+let edgeMatrix  = null;  // precomputed inter-cluster edge weights
+let currentLevel    = 1;
+let selectedCluster = null;
+let selectedSub     = null;
+let activeMatch     = null;
+
+// ── i18n helpers ───────────────────────────────────────────────────────────
+
+function t(key) {
+  return LANG[currentLang]?.[key] ?? LANG.nl[key] ?? key;
+}
+
+function getName(id) {
+  return NAMES[currentLang]?.[id] ?? NAMES.nl?.[id] ?? id;
+}
+
+function applyI18n() {
+  // Static elements with data-i18n attribute
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  // Search placeholder
+  const si = document.getElementById('search-input');
+  if (si) si.placeholder = t('searchPlaceholder');
+  // Mode hint
+  const hint = document.getElementById('mode-hint');
+  if (hint && !hint.classList.contains('hypothese')) hint.textContent = t('modeHintDefault');
+  // Lang button shows the OTHER language
+  document.getElementById('lang-btn').textContent = currentLang === 'nl' ? 'EN' : 'NL';
+  // Edge button
+  document.getElementById('edge-btn').textContent = showEdges ? t('edgeBtnOff') : t('edgeBtnOn');
+  document.getElementById('edge-btn').classList.toggle('active', showEdges);
+  // Legend edge row
+  document.getElementById('legend-edge-row').style.display = showEdges ? 'flex' : 'none';
+  // html lang attr
+  document.documentElement.lang = currentLang;
+}
+
+function toggleLang() {
+  setLang(currentLang === 'nl' ? 'en' : 'nl');
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  applyI18n();
+  redraw();
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+
+function fmtFollowers(n) {
+  if (!n) return "–";
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + "K";
+  return String(n);
+}
+
+function fmtReach(n) {
+  if (!n) return "–";
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M followers";
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + "K followers";
+  return n + " followers";
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────────
+
+const tooltip = document.getElementById("tooltip");
+
+function showTooltip(html, event) {
+  tooltip.innerHTML = html;
+  tooltip.classList.add("visible");
+  moveTooltip(event);
+}
+
+function moveTooltip(event) {
+  const x = event.clientX + 14;
+  const y = event.clientY - 10;
+  tooltip.style.left = Math.min(x, window.innerWidth - 260) + "px";
+  tooltip.style.top  = Math.max(y, 8) + "px";
+}
+
+function hideTooltip() { tooltip.classList.remove("visible"); }
+
+// ── Breadcrumb + Back ─────────────────────────────────────────────────────
+
+const backBtn    = document.getElementById("back-btn");
+const bcRoot     = document.getElementById("bc-root");
+const breadcrumb = document.getElementById("breadcrumb");
+
+function updateNav() {
+  while (breadcrumb.children.length > 1) breadcrumb.removeChild(breadcrumb.lastChild);
+
+  bcRoot.textContent = t('rootCrumb');
+
+  if (currentLevel >= 2 && selectedCluster) {
+    breadcrumb.appendChild(Object.assign(document.createElement("span"), { className: "sep", textContent: "›" }));
+    const sp = document.createElement("span");
+    sp.textContent = getName(selectedCluster.id);
+    sp.style.color = selectedCluster.color;
+    breadcrumb.appendChild(sp);
+  }
+  if (currentLevel >= 3 && selectedSub) {
+    breadcrumb.appendChild(Object.assign(document.createElement("span"), { className: "sep", textContent: "›" }));
+    breadcrumb.appendChild(Object.assign(document.createElement("span"), { textContent: getName(selectedSub.id) }));
+  }
+
+  backBtn.classList.toggle("visible", currentLevel > 1);
+}
+
+backBtn.addEventListener("click", () => {
+  if (currentLevel === 3) goLevel2(selectedCluster);
+  else if (currentLevel === 2) goLevel1();
+});
+bcRoot.addEventListener("click", () => { if (currentLevel > 1) goLevel1(); });
+
+function setMeta(text) { document.getElementById("meta-bar").textContent = text; }
+
+// ── SVG setup ─────────────────────────────────────────────────────────────
+
+const svgEl = document.getElementById("svg");
+const svg = d3.select(svgEl);
+let W, H;
+
+function resize() {
+  const rect = document.getElementById("canvas").getBoundingClientRect();
+  W = rect.width; H = rect.height;
+  svg.attr("viewBox", `0 0 ${W} ${H}`);
+}
+
+function redraw() {
+  if (currentLevel === 1) drawLevel1();
+  else if (currentLevel === 2 && selectedCluster) drawLevel2(selectedCluster);
+}
+
+window.addEventListener("resize", () => { resize(); redraw(); });
+
+// ── Edge overlay helpers ───────────────────────────────────────────────────
+
+function buildEdgeMatrix(data, edges) {
+  const acMap = {};
+  data.clusters.forEach(c => {
+    c.subclusters.forEach(sc => {
+      (sc.accounts || []).forEach(a => { acMap[a.username] = c.id; });
+    });
+  });
+
+  const matrix = {};
+  edges.forEach(e => {
+    const c1 = acMap[e.source], c2 = acMap[e.target];
+    if (c1 && c2 && c1 !== c2) {
+      const key = [c1, c2].sort().join('-');
+      matrix[key] = (matrix[key] || 0) + (e.weight || 1);
+    }
+  });
+  return matrix;
+}
+
+function buildSubEdgeMatrix(cluster, edges) {
+  const acMap = {};
+  cluster.subclusters.forEach(sc => {
+    (sc.accounts || []).forEach(a => { acMap[a.username] = sc.id; });
+  });
+
+  const matrix = {};
+  edges.forEach(e => {
+    const s1 = acMap[e.source], s2 = acMap[e.target];
+    if (s1 && s2 && s1 !== s2) {
+      const key = [s1, s2].sort().join('-');
+      matrix[key] = (matrix[key] || 0) + (e.weight || 1);
+    }
+  });
+  return matrix;
+}
+
+function arcPath(x1, y1, x2, y2, bend = 0.25) {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const dx = x2 - x1, dy = y2 - y1;
+  const cx = mx - dy * bend;
+  const cy = my + dx * bend;
+  return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+}
+
+function toggleEdgeView() {
+  showEdges = !showEdges;
+  applyI18n();
+  redraw();
+}
+
+// ── LEVEL 1 — Ecosystem view ──────────────────────────────────────────────
+
+function goLevel1() {
+  currentLevel = 1;
+  selectedCluster = null;
+  selectedSub = null;
+  updateNav();
+  setMeta(`${DATA.meta.total_accounts} accounts · ${(DATA.meta.total_videos / 1000).toFixed(0)}K videos`);
+  showAccountGrid(false);
+  document.getElementById("search-wrapper").classList.remove("hidden");
+  drawLevel1();
+}
+
+function drawLevel1() {
+  svg.selectAll("*").remove();
+  const clusters = DATA.clusters;
+  const sizeMax = d3.max(clusters, d => d.size);
+  const maxR = Math.min(W, H) / 2 - 60;
+  const rScale = d3.scaleSqrt().domain([0, sizeMax]).range([0, maxR * 0.55]);
+  const positions = layoutClusters(clusters, W, H);
+
+  const g = svg.append("g");
+
+  // ── Edge overlay ──
+  if (showEdges && edgeMatrix) {
+    const maxWeight = Math.max(...Object.values(edgeMatrix));
+    const wScale = d3.scaleLog().domain([1, Math.max(maxWeight, 2)]).range([1, 8]).clamp(true);
+
+    Object.entries(edgeMatrix).forEach(([key, weight]) => {
+      const [id1, id2] = key.split('-');
+      const i1 = clusters.findIndex(c => c.id === id1);
+      const i2 = clusters.findIndex(c => c.id === id2);
+      if (i1 < 0 || i2 < 0) return;
+      const p1 = positions[i1], p2 = positions[i2];
+      const r1 = rScale(clusters[i1].size), r2 = rScale(clusters[i2].size);
+      // Draw arc from edge of circle, not center
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const sx = p1.x + dx / len * r1;
+      const sy = p1.y + dy / len * r1;
+      const ex = p2.x - dx / len * r2;
+      const ey = p2.y - dy / len * r2;
+
+      g.append("path")
+        .attr("d", arcPath(sx, sy, ex, ey, 0.2))
+        .attr("class", "edge-arc")
+        .attr("stroke-width", wScale(weight))
+        .attr("stroke-opacity", 0.18);
+
+      // Count label at midpoint
+      const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+      const bdx = -(ey - sy) * 0.2, bdy = (ex - sx) * 0.2;
+      g.append("text")
+        .attr("class", "edge-arc-label")
+        .attr("x", mx + bdx * 0.5).attr("y", my + bdy * 0.5)
+        .text(weight.toLocaleString());
+    });
+  }
+
+  // ── Clusters ──
+  clusters.forEach((c, i) => {
+    const { x, y } = positions[i];
+    const r = rScale(c.size);
+    const displayName = getName(c.id);
+
+    const cg = g.append("g")
+      .attr("transform", `translate(${x},${y})`)
+      .style("cursor", "pointer")
+      .on("click", () => goLevel2(c))
+      .on("mousemove", ev => showTooltip(
+        `<strong>${esc(displayName)}</strong>
+         <span class="muted">${c.size} accounts · ${fmtReach(c.reach)}</span><br>
+         <span class="muted">density: ${c.density}</span>`, ev))
+      .on("mouseleave", hideTooltip);
+
+    cg.append("circle")
+      .attr("r", r)
+      .attr("fill", c.color)
+      .attr("fill-opacity", 0.18)
+      .attr("stroke", c.color)
+      .attr("stroke-width", 2)
+      .attr("class", "bubble-circle");
+
+    // Sub-cluster dots inside
+    const subPositions = packCircles(c.subclusters.map(s => s.size), r * 0.7 * 0.85);
+    c.subclusters.forEach((sc, si) => {
+      const sp = subPositions[si]; if (!sp) return;
+      const sr = Math.sqrt(sc.size) * (r / Math.sqrt(sizeMax)) * 1.1;
+      cg.append("circle")
+        .attr("cx", sp.x).attr("cy", sp.y)
+        .attr("r", Math.max(sr, 4))
+        .attr("fill", c.color)
+        .attr("fill-opacity", 0.12 + sc.density * 0.4)
+        .attr("stroke", c.color)
+        .attr("stroke-width", 1)
+        .attr("stroke-opacity", 0.4);
+    });
+
+    // Bridge dots
+    const bridges = c.bridge_accounts || [];
+    bridges.slice(0, 6).forEach((b, bi) => {
+      const angle = (bi / Math.max(bridges.length, 1)) * Math.PI * 2 - Math.PI / 2;
+      cg.append("circle")
+        .attr("cx", Math.cos(angle) * r * 0.92)
+        .attr("cy", Math.sin(angle) * r * 0.92)
+        .attr("r", 5)
+        .attr("fill", "#f59e0b");
+    });
+
+    // Label
+    const lg = cg.append("g").attr("class", "cluster-label").attr("transform", `translate(0,${r + 22})`);
+    lg.append("text")
+      .attr("text-anchor", "middle")
+      .attr("fill", c.color)
+      .attr("font-size", 13)
+      .attr("font-weight", 600)
+      .text(displayName);
+
+    lg.append("text")
+      .attr("text-anchor", "middle")
+      .attr("fill", "#777")
+      .attr("font-size", 11)
+      .attr("y", 18)
+      .text(`${c.size} accounts · ${fmtReach(c.reach)}`);
+  });
+
+  // ── Pulse rings for active match ──
+  if (activeMatch) {
+    const highlightIds = activeMatch.multiClusterIds
+      ? activeMatch.multiClusterIds
+      : (activeMatch.clusterId ? [activeMatch.clusterId] : []);
+
+    highlightIds.forEach(cid => {
+      const idx = clusters.findIndex(c => c.id === cid);
+      if (idx < 0) return;
+      const { x, y } = positions[idx];
+      const r = rScale(clusters[idx].size);
+      svg.append("circle")
+        .attr("cx", x).attr("cy", y)
+        .attr("r", r + 4)
+        .attr("stroke", clusters[idx].color)
+        .attr("stroke-width", 3)
+        .attr("stroke-opacity", 0.85)
+        .attr("fill", "none")
+        .attr("class", "pulse-ring");
+    });
+  }
+}
+
+function layoutClusters(clusters, W, H) {
+  const cx = W / 2, cy = H / 2 - H * 0.04;
+  if (clusters.length === 1) return [{ x: cx, y: cy }];
+  if (clusters.length === 2) return [{ x: cx - W * 0.22, y: cy }, { x: cx + W * 0.22, y: cy }];
+  const r = Math.min(W, H) * 0.24;
+  const startAngle = -Math.PI * 5 / 6;
+  return clusters.map((_, i) => ({
+    x: cx + Math.cos(startAngle + (i / clusters.length) * Math.PI * 2) * r,
+    y: cy + Math.sin(startAngle + (i / clusters.length) * Math.PI * 2) * r,
+  }));
+}
+
+function packCircles(sizes, containerR) {
+  const n = sizes.length;
+  if (n === 0) return [];
+  const spreadR = containerR * 0.5;
+  return sizes.map((_, i) => ({
+    x: Math.cos((i / n) * Math.PI * 2) * spreadR,
+    y: Math.sin((i / n) * Math.PI * 2) * spreadR,
+  }));
+}
+
+// ── LEVEL 2 — Bubble interior ─────────────────────────────────────────────
+
+function goLevel2(cluster) {
+  currentLevel = 2;
+  selectedCluster = cluster;
+  selectedSub = null;
+  updateNav();
+  setMeta(`${cluster.size} accounts · density ${cluster.density}`);
+  showAccountGrid(false);
+  document.getElementById("search-wrapper").classList.add("hidden");
+  closeFinderPanel();
+  drawLevel2(cluster);
+}
+
+function drawLevel2(cluster) {
+  svg.selectAll("*").remove();
+  const subs = cluster.subclusters;
+  const sizeMax = d3.max(subs, d => d.size);
+  const layoutR = Math.min(W, H) * 0.22;
+  const maxR = layoutR * 0.7;
+  const rScale = d3.scaleSqrt().domain([0, sizeMax]).range([0, maxR]);
+  const positions = layoutSubs(subs, W, H);
+
+  const g = svg.append("g");
+
+  // Background ellipse
+  g.append("ellipse")
+    .attr("cx", W / 2).attr("cy", H / 2)
+    .attr("rx", W * 0.48).attr("ry", H * 0.45)
+    .attr("fill", cluster.color).attr("fill-opacity", 0.04)
+    .attr("stroke", cluster.color).attr("stroke-width", 1)
+    .attr("stroke-dasharray", "6 4").attr("stroke-opacity", 0.25);
+
+  // ── Sub-cluster edge overlay ──
+  if (showEdges && GRAPH_DATA) {
+    const subMatrix = buildSubEdgeMatrix(cluster, GRAPH_DATA.edges || []);
+    const maxW = Math.max(...Object.values(subMatrix), 1);
+    const wScale = d3.scaleLog().domain([1, Math.max(maxW, 2)]).range([1, 6]).clamp(true);
+
+    Object.entries(subMatrix).forEach(([key, weight]) => {
+      const [id1, id2] = key.split('-');
+      const i1 = subs.findIndex(s => s.id === id1);
+      const i2 = subs.findIndex(s => s.id === id2);
+      if (i1 < 0 || i2 < 0) return;
+      const p1 = positions[i1], p2 = positions[i2];
+      g.append("path")
+        .attr("d", arcPath(p1.x, p1.y, p2.x, p2.y, 0.15))
+        .attr("class", "edge-arc")
+        .attr("stroke-width", wScale(weight))
+        .attr("stroke", cluster.color)
+        .attr("stroke-opacity", 0.15);
+    });
+  }
+
+  // ── Sub-clusters ──
+  subs.forEach((sc, i) => {
+    const { x, y } = positions[i];
+    const r = Math.max(rScale(sc.size), 30);
+    const opacity = 0.2 + sc.density * 0.6;
+    const displayName = getName(sc.id);
+
+    const cg = g.append("g")
+      .attr("transform", `translate(${x},${y})`)
+      .style("cursor", "pointer")
+      .on("click", () => goLevel3(sc))
+      .on("mousemove", ev => {
+        const tags = sc.top_hashtags.slice(0, 4).map(t => `#${t}`).join(" ");
+        showTooltip(`<strong>${esc(displayName)}</strong>
+          <span class="muted">${sc.size} accounts · density ${sc.density}</span><br>
+          <span class="muted">${tags}</span>`, ev);
+      })
+      .on("mouseleave", hideTooltip);
+
+    cg.append("circle")
+      .attr("r", r)
+      .attr("fill", cluster.color).attr("fill-opacity", opacity * 0.35)
+      .attr("stroke", cluster.color).attr("stroke-width", 2).attr("stroke-opacity", opacity)
+      .attr("class", "sub-circle");
+
+    // Bridge dots
+    const bridgeAccounts = (sc.accounts || []).filter(a => a.is_bridge);
+    bridgeAccounts.slice(0, 5).forEach((b, bi) => {
+      const angle = (bi / Math.max(bridgeAccounts.length, 1)) * Math.PI * 2 - Math.PI / 4;
+      cg.append("circle")
+        .attr("cx", Math.cos(angle) * (r + 4)).attr("cy", Math.sin(angle) * (r + 4))
+        .attr("r", 5).attr("fill", "#f59e0b")
+        .attr("stroke", "#0d0d0d").attr("stroke-width", 1)
+        .style("cursor", "default")
+        .on("mousemove", ev => {
+          ev.stopPropagation();
+          showTooltip(`<strong>@${b.username}</strong><br><span class="muted">bridge · ${fmtFollowers(b.followers)} followers</span>`, ev);
+        })
+        .on("mouseleave", hideTooltip);
+    });
+
+    // Label
+    const lg = cg.append("g").attr("class", "cluster-label").attr("transform", `translate(0,${r + 18})`);
+    lg.append("text").attr("text-anchor", "middle")
+      .attr("fill", cluster.color).attr("fill-opacity", opacity * 1.2)
+      .attr("font-size", 12).attr("font-weight", 600)
+      .text(displayName);
+    lg.append("text").attr("text-anchor", "middle")
+      .attr("fill", "#666").attr("font-size", 10).attr("y", 15)
+      .text(`${sc.size} accounts`);
+
+    // Hashtag hints
+    const tg = cg.append("g").attr("class", "cluster-label").attr("transform", `translate(0,${r + 46})`);
+    sc.top_hashtags.slice(0, 3).forEach((tag, ti) => {
+      tg.append("text").attr("text-anchor", "middle").attr("x", 0).attr("y", ti * 14)
+        .attr("fill", "#555").attr("font-size", 10).text(`#${tag}`);
+    });
+  });
+}
+
+function layoutSubs(subs, W, H) {
+  const n = subs.length;
+  const cx = W / 2, cy = H / 2 - 20;
+  const r = Math.min(W, H) * 0.27;
+  if (n === 1) return [{ x: cx, y: cy }];
+  if (n === 2) return [{ x: cx - r * 0.7, y: cy }, { x: cx + r * 0.7, y: cy }];
+  if (n <= 5) {
+    return subs.map((_, i) => {
+      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      return { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r };
+    });
+  }
+  const cols = Math.ceil(n / 2);
+  const spacingX = Math.min(W / (cols + 1), 180);
+  const spacingY = H * 0.28;
+  return subs.map((_, i) => {
+    const row = i < cols ? 0 : 1;
+    const col = i < cols ? i : i - cols;
+    const rowCount = row === 0 ? cols : n - cols;
+    const startX = cx - (rowCount - 1) * spacingX / 2;
+    return { x: startX + col * spacingX, y: cy + (row - 0.5) * spacingY };
+  });
+}
+
+// ── LEVEL 3 — Account grid ────────────────────────────────────────────────
+
+function goLevel3(sub) {
+  currentLevel = 3;
+  selectedSub = sub;
+  updateNav();
+  svg.selectAll("*").remove();
+  showAccountGrid(true, sub);
+}
+
+function showAccountGrid(visible, sub) {
+  const grid   = document.getElementById("account-grid");
+  const legend = document.getElementById("legend");
+
+  if (!visible) {
+    grid.classList.remove("visible");
+    legend.style.display = "";
+    return;
+  }
+
+  legend.style.display = "none";
+  grid.classList.add("visible");
+
+  document.getElementById("grid-title").textContent = getName(sub.id);
+  const bridges = sub.accounts.filter(a => a.is_bridge).length;
+  document.getElementById("grid-meta").textContent =
+    `${sub.accounts.length} accounts · density ${sub.density}` +
+    (bridges > 0 ? ` · ${bridges} bridge${bridges === 1 ? "" : "s"}` : "");
+
+  const cards = document.getElementById("grid-cards");
+  cards.innerHTML = "";
+
+  const sorted = [...sub.accounts].sort((a, b) => (b.fit_score || 0) - (a.fit_score || 0));
+
+  sorted.forEach(a => {
+    const card = document.createElement("div");
+    card.className = "account-card";
+    const fitPct = Math.round((a.fit_score || 0) * 100);
+    card.innerHTML = `
+      <div class="card-header">
+        <div>
+          <div class="card-username">@${esc(a.username)}</div>
+          ${a.display_name ? `<div class="card-display">${esc(a.display_name)}</div>` : ""}
+          <div class="card-followers">${fmtFollowers(a.followers)} followers</div>
+        </div>
+        ${a.is_bridge ? `<span class="bridge-badge">${t('bridgeBadge')}</span>` : ""}
+      </div>
+      ${a.bio ? `<div class="card-bio">${esc(a.bio.slice(0, 100))}</div>` : `<div class="card-bio"></div>`}
+      <div class="fit-bar-row">
+        <span class="fit-label">${t('fitLabel')}</span>
+        <div class="fit-track"><div class="fit-fill" style="width:${fitPct}%"></div></div>
+        <span class="fit-value">${(a.fit_score || 0).toFixed(2)}</span>
+      </div>
+      <div class="card-tags">
+        ${(a.top_hashtags || []).slice(0, 6).map(tag => `<span class="tag">#${esc(tag)}</span>`).join("")}
+      </div>`;
+    if (a.is_bridge) card.style.borderColor = "#4a3a00";
+    cards.appendChild(card);
+  });
+}
+
+// ── Bubble Finder ─────────────────────────────────────────────────────────
+
+function initFinder() {
+  const keyBar    = document.getElementById("api-key-bar");
+  const keyInput  = document.getElementById("api-key-input");
+  const keySave   = document.getElementById("api-key-save");
+  const searchIn  = document.getElementById("search-input");
+  const searchBtn = document.getElementById("search-btn");
+  const clearBtn  = document.getElementById("search-clear");
+  const spinner   = document.getElementById("search-spinner");
+  const exploreBtn= document.getElementById("finder-explore-btn");
+
+  function refreshKeyBar() {
+    keyBar.classList.toggle("visible", !BubbleFinder.hasKey());
+  }
+  refreshKeyBar();
+
+  keySave.addEventListener("click", () => {
+    const v = keyInput.value.trim();
+    if (v) { BubbleFinder.setApiKey(v); keyInput.value = ""; refreshKeyBar(); }
+  });
+  keyInput.addEventListener("keydown", e => { if (e.key === "Enter") keySave.click(); });
+
+  async function doSearch() {
+    const q = searchIn.value.trim();
+    if (!q) return;
+    if (!BubbleFinder.hasKey()) { keyBar.classList.add("visible"); keyInput.focus(); return; }
+
+    searchBtn.disabled = true;
+    spinner.classList.add("visible");
+    clearBtn.classList.remove("visible");
+
+    try {
+      const result = await BubbleFinder.findBubble(q, DATA, currentLang);
+      handleFinderResult(result, q);
+    } catch (err) {
+      if (err.code === "NO_KEY" || err.code === "INVALID_KEY") {
+        BubbleFinder.clearApiKey(); refreshKeyBar();
+      }
+      showFinderError(err.message || (currentLang === 'en' ? "Unknown error." : "Onbekende fout."));
+    } finally {
+      searchBtn.disabled = false;
+      spinner.classList.remove("visible");
+      clearBtn.classList.add("visible");
+    }
+  }
+
+  searchIn.addEventListener("input", () => {
+    const hint = document.getElementById("mode-hint");
+    const mode = BubbleFinder.detectMode(searchIn.value, currentLang);
+    if (mode === "hypothese") {
+      hint.textContent = t('modeHintHyp');
+      hint.className = "hypothese";
+    } else {
+      hint.textContent = t('modeHintDefault');
+      hint.className = "";
+    }
+  });
+
+  searchBtn.addEventListener("click", doSearch);
+  searchIn.addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+
+  clearBtn.addEventListener("click", () => {
+    searchIn.value = ""; clearBtn.classList.remove("visible");
+    clearActiveMatch(); closeFinderPanel();
+  });
+
+  document.getElementById("finder-close").addEventListener("click", () => {
+    closeFinderPanel(); clearActiveMatch();
+    searchIn.value = ""; clearBtn.classList.remove("visible");
+    if (currentLevel === 1) drawLevel1();
+  });
+
+  exploreBtn.addEventListener("click", () => {
+    if (activeMatch?.clusterObj) { closeFinderPanel(); goLevel2(activeMatch.clusterObj); }
+  });
+}
+
+function clearActiveMatch() { activeMatch = null; }
+function closeFinderPanel() {
+  document.getElementById("finder-panel").classList.remove("open");
+  document.getElementById("finder-explore-btn").style.display = "none";
+}
+function openFinderPanel() { document.getElementById("finder-panel").classList.add("open"); }
+
+function handleFinderResult(result) {
+  if (result.mode === "hypothese") { handleHypotheseResult(result); return; }
+  if (result.spans_multiple || (result.partial_matches && result.partial_matches.length > 0)) {
+    handleSpanningResult(result); return;
+  }
+  if (!result.matches || result.matches.length === 0) { showFinderNoMatch(result.summary); return; }
+
+  const match = result.matches[0];
+  const clusterObj = DATA.clusters.find(c => c.id === match.cluster_id);
+  activeMatch = { clusterId: match.cluster_id, clusterObj, match, result };
+  if (currentLevel === 1) drawLevel1();
+  renderMatchPanel(match, result.summary, clusterObj);
+  openFinderPanel();
+}
+
+function handleSpanningResult(result) {
+  const foundMatches = (result.partial_matches || []).filter(m => m.cluster_id);
+  const clusterIds  = [...new Set(foundMatches.map(m => m.cluster_id))];
+  const clusterObjs = clusterIds.map(id => DATA.clusters.find(c => c.id === id)).filter(Boolean);
+  activeMatch = { clusterId: clusterIds[0] || null, clusterObj: clusterObjs[0] || null, multiClusterIds: clusterIds, match: null, result };
+  if (currentLevel === 1) drawLevel1();
+  renderSpanningPanel(result, clusterObjs);
+  openFinderPanel();
+}
+
+function handleHypotheseResult(result) {
+  const ids = (result.clusters_betrokken || []).map(c => c.cluster_id);
+  const clusterObjs = ids.map(id => DATA.clusters.find(c => c.id === id)).filter(Boolean);
+  const primary = clusterObjs[0];
+  activeMatch = primary ? { clusterId: primary.id, clusterObj: primary, match: null, result } : null;
+  if (currentLevel === 1) drawLevel1();
+  renderHypothesePanel(result, clusterObjs);
+  openFinderPanel();
+}
+
+// ── Match panel ───────────────────────────────────────────────────────────
+
+function renderMatchPanel(match, summary, clusterObj) {
+  const color = clusterObj?.color || "#888";
+  const pct   = Math.round((match.confidence || 0) * 100);
+  const blindHTML = (match.blind_spots || []).slice(0, 3).map(b => `<li>${esc(b)}</li>`).join("");
+  const bridgeHTML = (match.bridge_accounts || []).slice(0, 4)
+    .map(u => `<span class="finder-bridge-pill">${esc(u.startsWith("@") ? u : "@" + u)}</span>`).join("");
+  const subLabel = match.matched_subcluster_name
+    ? `${currentLang === 'en' ? 'Sub-cluster' : 'Sub-cluster'}: <strong>${esc(match.matched_subcluster_name)}</strong>` : "";
+
+  document.getElementById("finder-scroll").innerHTML = `
+    <div class="finder-eyebrow">${t('foundLabel')} · ${pct}% ${t('certainty')}</div>
+    <div class="finder-cluster-name">
+      <div class="finder-color-dot" style="background:${color}"></div>
+      ${esc(match.cluster_name)}
+    </div>
+    ${subLabel ? `<div class="finder-sub">${subLabel}</div>` : ""}
+    <div class="finder-section">
+      <div class="finder-section-label">${t('whyLabel')}</div>
+      <div class="finder-why">${esc(match.why || "")}</div>
+    </div>
+    ${blindHTML ? `<div class="finder-section">
+      <div class="finder-section-label">${t('blindLabel')}</div>
+      <ul class="finder-blindspot-list">${blindHTML}</ul>
+    </div>` : ""}
+    ${bridgeHTML ? `<div class="finder-section">
+      <div class="finder-section-label">${t('bridgesLabel')}</div>
+      <div class="finder-bridges">${bridgeHTML}</div>
+    </div>` : ""}
+    ${summary ? `<div class="finder-summary">${esc(summary)}</div>` : ""}`;
+
+  if (clusterObj) {
+    const btn = document.getElementById("finder-explore-btn");
+    btn.style.display = "flex";
+    btn.style.borderColor = color + "55";
+    btn.style.color = color;
+    btn.querySelector("span").textContent = `${t('exploreBtn').replace('deze bubbel','').replace('this bubble','').trim()} ${getName(clusterObj.id)}`;
+  }
+}
+
+// ── Hypothese panel ───────────────────────────────────────────────────────
+
+function renderHypothesePanel(result, clusterObjs) {
+  const verdict = result.verdict || "GEDEELTELIJK";
+  const score   = Math.round((result.verdict_score || 0.5) * 100);
+  const scoreColor = { BEVESTIGD: "#34d399", GEDEELTELIJK: "#f59e0b", ONTKRACHT: "#f87171" };
+  const verdictLabel = t('verdictLabels')[verdict] || verdict;
+
+  const bewijsHTML = (result.bewijs || []).slice(0, 3).map(b => `<li>${esc(b)}</li>`).join("");
+  const clustersHTML = (result.clusters_betrokken || []).map(c => {
+    const obj = DATA.clusters.find(d => d.id === c.cluster_id);
+    const color = obj?.color || "#888";
+    return `<div style="margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+        <span style="font-size:12px;font-weight:600">${esc(c.cluster_name)}${c.subcluster_name ? ` › ${esc(c.subcluster_name)}` : ""}</span>
+      </div>
+      <div style="font-size:11px;color:#666;padding-left:14px">${esc(c.relevantie || "")}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("finder-scroll").innerHTML = `
+    <div class="finder-eyebrow" style="margin-bottom:10px">${t('hypLabel')}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;font-style:italic">"${esc(result.hypothese_samenvatting || "")}"</div>
+    <span class="verdict-badge verdict-${verdict}">${verdictLabel}</span>
+    <div class="verdict-score-bar">
+      <div class="verdict-score-fill" style="width:${score}%;background:${scoreColor[verdict] || '#888'}"></div>
+    </div>
+    <div class="finder-section">
+      <div class="finder-section-label">${t('reasonLabel')}</div>
+      <div class="finder-why">${esc(result.redenering || "")}</div>
+    </div>
+    ${bewijsHTML ? `<div class="finder-section">
+      <div class="finder-section-label">${t('evidenceLabel')}</div>
+      <ul class="finder-bewijs-list">${bewijsHTML}</ul>
+    </div>` : ""}
+    ${result.nuance ? `<div class="finder-section">
+      <div class="finder-section-label">${t('nuanceLabel')}</div>
+      <div class="finder-nuance">${esc(result.nuance)}</div>
+    </div>` : ""}
+    ${clustersHTML ? `<div class="finder-section">
+      <div class="finder-section-label">${t('clustersLabel')}</div>
+      ${clustersHTML}
+    </div>` : ""}
+    ${result.alternatieve_lezing ? `<div class="finder-summary">${esc(result.alternatieve_lezing)}</div>` : ""}`;
+
+  if (clusterObjs[0]) {
+    const c = clusterObjs[0];
+    const btn = document.getElementById("finder-explore-btn");
+    btn.style.display = "flex";
+    btn.style.borderColor = (c.color || "#888") + "55";
+    btn.style.color = c.color || "#888";
+    btn.querySelector("span").textContent = `${t('exploreBtn').replace('deze bubbel','').replace('this bubble','').trim()} ${getName(c.id)}`;
+  } else {
+    document.getElementById("finder-explore-btn").style.display = "none";
+  }
+}
+
+// ── Spanning panel ────────────────────────────────────────────────────────
+
+function renderSpanningPanel(result, clusterObjs) {
+  const partials = result.partial_matches || [];
+  const found    = partials.filter(m => m.cluster_id);
+  const missing  = partials.filter(m => !m.cluster_id);
+
+  const foundHTML = found.map(m => {
+    const obj = DATA.clusters.find(c => c.id === m.cluster_id);
+    const color = obj?.color || "#888";
+    const pct = Math.round((m.confidence || 0) * 100);
+    return `<div style="margin-bottom:12px;padding:10px;background:#1a1a1a;border-radius:6px;border:1px solid var(--border)">
+      <div style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#555;margin-bottom:4px">${esc(m.aspect || "")}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+        <span style="font-size:12px;font-weight:600">${esc(m.cluster_name || "")}</span>
+      </div>
+      ${m.subcluster_name ? `<div style="font-size:11px;color:var(--muted);padding-left:14px">${esc(m.subcluster_name)}</div>` : ""}
+      <div style="margin-top:6px;height:3px;background:var(--border);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:2px"></div>
+      </div>
+      <div style="font-size:10px;color:#555;margin-top:3px">${pct}% ${t('certainty')}</div>
+    </div>`;
+  }).join("");
+
+  const missingHTML = missing.map(m => `
+    <div style="margin-bottom:8px;display:flex;align-items:flex-start;gap:8px">
+      <span style="color:#555;font-size:12px;flex-shrink:0;margin-top:1px">×</span>
+      <div><span style="font-size:12px;color:#666">${esc(m.aspect || "")}</span>
+      <span style="font-size:11px;color:#444;margin-left:6px">${t('notFoundNote')}</span></div>
+    </div>`).join("");
+
+  document.getElementById("finder-scroll").innerHTML = `
+    <div class="finder-eyebrow" style="margin-bottom:6px">${t('spanningLabel')}</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">${t('spanningDesc')}</div>
+    ${found.length > 0 ? `<div class="finder-section-label" style="margin-bottom:8px">${t('foundInData')}</div>${foundHTML}` : ""}
+    ${missing.length > 0 ? `<div class="finder-section-label" style="margin-bottom:8px;margin-top:4px">${t('notFoundData')}</div>${missingHTML}` : ""}
+    ${result.summary ? `<div class="finder-summary" style="margin-top:8px">${esc(result.summary)}</div>` : ""}`;
+
+  if (clusterObjs[0]) {
+    const c = clusterObjs[0];
+    const btn = document.getElementById("finder-explore-btn");
+    btn.style.display = "flex";
+    btn.style.borderColor = (c.color || "#888") + "55";
+    btn.style.color = c.color || "#888";
+    btn.querySelector("span").textContent = `${t('exploreBtn').replace('deze bubbel','').replace('this bubble','').trim()} ${getName(c.id)}`;
+  } else {
+    document.getElementById("finder-explore-btn").style.display = "none";
+  }
+}
+
+function showFinderNoMatch(summary) {
+  document.getElementById("finder-scroll").innerHTML = `
+    <div class="finder-eyebrow" style="margin-bottom:10px">${t('noMatch')}</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:12px">${summary ? esc(summary) : ""}</div>
+    <div style="font-size:11px;color:#555;line-height:1.6">${t('noMatchTip')}</div>`;
+  document.getElementById("finder-explore-btn").style.display = "none";
+  openFinderPanel();
+}
+
+function showFinderError(msg) {
+  document.getElementById("finder-scroll").innerHTML = `
+    <div class="finder-eyebrow" style="margin-bottom:12px;color:#f59e0b">${t('errorLabel')}</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7">${esc(msg)}</div>`;
+  document.getElementById("finder-explore-btn").style.display = "none";
+  openFinderPanel();
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────
+
+async function init() {
+  const canvas = document.getElementById("canvas");
+
+  try {
+    const [dataResp, graphResp] = await Promise.all([
+      fetch("../bubbletree/bubbletree_data.json"),
+      fetch("../data/graph.json"),
+    ]);
+    if (!dataResp.ok) throw new Error("Could not load bubbletree_data.json — run bubbletree_export.py first.");
+    DATA = await dataResp.json();
+    if (graphResp.ok) {
+      GRAPH_DATA = await graphResp.json();
+      edgeMatrix = buildEdgeMatrix(DATA, GRAPH_DATA.edges || []);
+    }
+  } catch (e) {
+    canvas.innerHTML = `<div style="padding:40px;color:#f59e0b">
+      <strong>${e.message}</strong><br><br>
+      Start a local server from <code>/Documents/bubblescape/</code>:<br>
+      <code>python3 -m http.server 7825</code><br>
+      Then open <code>http://localhost:7825/v2/bubblescape.html</code>
+    </div>`;
+    return;
+  }
+
+  resize();
+  applyI18n();
+  initFinder();
+  goLevel1();
+}
+
+init();
+</script>
+</body>
+</html>

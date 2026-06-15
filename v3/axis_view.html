@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubblescape — As-kaart</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --text-dim: #888;
+    --text-dimmer: #555;
+    --accent: #ffffff;
+    --c1: #1D9E75;
+    --c2: #5B4FCF;
+    --c3: #D97B2C;
+    --radius: 8px;
+    --mono: 'SF Mono', 'Fira Mono', 'Consolas', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── top bar ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    height: 48px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  #topbar h1 {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    white-space: nowrap;
+    margin-right: 4px;
+  }
+
+  .axis-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .axis-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dimmer);
+    white-space: nowrap;
+  }
+
+  .axis-label.x { color: #7ec8e3; }
+  .axis-label.y { color: #e3a87e; }
+
+  select {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 26px 4px 9px;
+    font-size: 12px;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 7px center;
+    min-width: 180px;
+  }
+
+  select:focus { outline: none; border-color: #444; }
+
+  .divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+  }
+
+  .toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface2);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .toggle-btn.active {
+    border-color: #444;
+    color: var(--text);
+    background: #252525;
+  }
+
+  .toggle-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dimmer);
+    transition: background 0.15s;
+  }
+  .toggle-btn.active .toggle-dot { background: #aaa; }
+
+  /* ── main layout ── */
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── canvas area ── */
+  #canvas-wrap {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  svg#plot {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* axis lines */
+  .axis-line { stroke: #2a2a2a; stroke-width: 1; }
+  .axis-tick-label {
+    fill: #444;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+  .axis-name-label {
+    fill: #555;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .axis-name-label.x-label { fill: #4a8fab; }
+  .axis-name-label.y-label { fill: #a88050; }
+
+  /* cluster circles */
+  .cluster-circle {
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .cluster-circle:hover { opacity: 0.85; }
+
+  .cluster-label {
+    pointer-events: none;
+    dominant-baseline: central;
+    text-anchor: middle;
+    font-size: 12px;
+    font-weight: 600;
+    fill: white;
+    paint-order: stroke;
+    stroke: rgba(0,0,0,0.7);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+  }
+
+  .cluster-label.small {
+    font-size: 10px;
+    font-weight: 500;
+    fill: rgba(255,255,255,0.7);
+    stroke-width: 2px;
+  }
+
+  /* sub-cluster connection line */
+  .parent-line {
+    stroke-dasharray: 3 3;
+    opacity: 0.25;
+  }
+
+  /* ── tooltip ── */
+  #tooltip {
+    position: absolute;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 14px 16px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    max-width: 280px;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+
+  #tooltip.visible { opacity: 1; }
+
+  .tt-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .tt-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .tt-name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .tt-id {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-dimmer);
+    margin-top: 2px;
+  }
+
+  .tt-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+
+  .tt-tag {
+    background: #252525;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-dim);
+  }
+
+  .tt-scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    border-top: 1px solid #2a2a2a;
+    padding-top: 10px;
+  }
+
+  .tt-score-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .tt-score-key {
+    font-size: 10px;
+    color: var(--text-dimmer);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .tt-score-val {
+    font-size: 12px;
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+
+  .tt-score-bar {
+    height: 3px;
+    background: #2a2a2a;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .tt-score-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .tt-size {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #2a2a2a;
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ── axis legend panel ── */
+  #legend {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    transition: width 0.25s ease;
+  }
+
+  #legend.collapsed {
+    width: 36px;
+    overflow: hidden;
+  }
+
+  #legend.collapsed > *:not(#legend-toggle-bar) {
+    display: none;
+  }
+
+  #legend-toggle-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  #legend-toggle-bar:hover { background: var(--surface2); }
+
+  #legend-toggle-icon {
+    font-size: 14px;
+    color: var(--text-dim);
+    user-select: none;
+    transition: transform 0.25s;
+  }
+
+  #legend.collapsed #legend-toggle-icon { transform: rotate(180deg); }
+
+  #legend h2 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dimmer);
+    padding: 16px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .legend-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .legend-section h3 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dimmer);
+    margin-bottom: 10px;
+  }
+
+  .axis-def {
+    margin-bottom: 12px;
+  }
+
+  .axis-def-name {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .axis-pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .axis-def-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .axis-def-poles {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 10px;
+    font-family: var(--mono);
+  }
+
+  .pole-low { color: #888; }
+  .pole-high { color: #bbb; }
+
+  .caveat-box {
+    margin: 0 16px 16px;
+    padding: 10px 12px;
+    background: #1a1510;
+    border: 1px solid #3a2a1a;
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: #a08060;
+    line-height: 1.5;
+  }
+
+  .caveat-box strong {
+    color: #c09a70;
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* cluster legend */
+  .cluster-legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .cl-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .cl-info { flex: 1; }
+  .cl-name { font-size: 12px; font-weight: 600; line-height: 1.3; }
+  .cl-sub { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+</style>
+</head>
+<body>
+
+<!-- top bar -->
+<div id="topbar">
+  <h1>As-kaart</h1>
+
+  <div class="axis-control">
+    <span class="axis-label x">X</span>
+    <select id="x-axis" onchange="updateAxes()"></select>
+  </div>
+
+  <div class="axis-control">
+    <span class="axis-label y">Y</span>
+    <select id="y-axis" onchange="updateAxes()"></select>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="toggle-btn" id="toggle-sub" onclick="toggleSubclusters()">
+    <span class="toggle-dot"></span>
+    Sub-clusters
+  </button>
+</div>
+
+<!-- main -->
+<div id="main">
+  <div id="canvas-wrap">
+    <svg id="plot"></svg>
+    <div id="tooltip"></div>
+  </div>
+  <div id="legend">
+    <div id="legend-toggle-bar" onclick="toggleLegend()" title="Legenda in/uitklappen">
+      <span id="legend-toggle-icon">‹</span>
+    </div>
+    <h2>As-definities</h2>
+
+    <div class="legend-section">
+      <div class="axis-def">
+        <div class="axis-def-name">
+          <span class="axis-pip" style="background:#7ec8e3"></span>
+          Links–Rechts
+        </div>
+        <div class="axis-def-desc">Verhouding rechts-signaal hashtags (fvd, pvv, wilders, migratie) versus links-signaal hashtags (groenlinks, d66, klimaat, palestina).</div>
+        <div class="axis-def-poles"><span class="pole-low">← Links</span><span class="pole-high">Rechts →</span></div>
+      </div>
+
+      <div class="axis-def">
+        <div class="axis-def-name">
+          <span class="axis-pip" style="background:#e3a87e"></span>
+          Institutioneel vertrouwen
+        </div>
+        <div class="axis-def-desc">Hoog-vertrouwen tags (nos, nrc, nieuwsuur) vs. laag-vertrouwen tags (fvd, nederlandopstand, complot).</div>
+        <div class="axis-def-poles"><span class="pole-low">← Wantrouwen</span><span class="pole-high">Vertrouwen →</span></div>
+      </div>
+
+      <div class="axis-def">
+        <div class="axis-def-name">
+          <span class="axis-pip" style="background:#b87ee3"></span>
+          Religieuze identiteit
+        </div>
+        <div class="axis-def-desc">Fractie islamitische identiteitstags (islam, moslim, ramadan, quran) van alle tags.</div>
+        <div class="axis-def-poles"><span class="pole-low">← Seculier</span><span class="pole-high">Religieus →</span></div>
+      </div>
+
+      <div class="axis-def">
+        <div class="axis-def-name">
+          <span class="axis-pip" style="background:#7ee3b8"></span>
+          Bubbel-geslotenheid
+        </div>
+        <div class="axis-def-desc">Interne dichtheid van de cluster: hoe hoog, hoe meer accounts hashtags met elkaar delen. Hogere waarde = meer gesloten informatieomgeving.</div>
+        <div class="axis-def-poles"><span class="pole-low">← Open</span><span class="pole-high">Gesloten →</span></div>
+      </div>
+
+      <div class="axis-def">
+        <div class="axis-def-name">
+          <span class="axis-pip" style="background:#e3e37e"></span>
+          Cultureel vs. Politiek
+        </div>
+        <div class="axis-def-desc">Verhouding leefstijl-tags (fyp, viral, grappig, muziek) versus politieke tags (politiek, tweedekamer, pvv).</div>
+        <div class="axis-def-poles"><span class="pole-low">← Politiek</span><span class="pole-high">Cultureel →</span></div>
+      </div>
+
+      <div class="axis-def">
+        <div class="axis-def-name">
+          <span class="axis-pip" style="background:#e37e7e"></span>
+          Bereik
+        </div>
+        <div class="axis-def-desc">Logaritmisch totaal aantal volgers van alle accounts in de cluster. Maat voor algoritmische zichtbaarheid.</div>
+        <div class="axis-def-poles"><span class="pole-low">← Klein</span><span class="pole-high">Groot →</span></div>
+      </div>
+    </div>
+
+    <div class="legend-section">
+      <h3>Clusters</h3>
+      <div class="cluster-legend-item">
+        <div class="cl-dot" style="background:#1D9E75"></div>
+        <div class="cl-info">
+          <div class="cl-name">Gewoon Nederlands TikTok</div>
+          <div class="cl-sub">126 accounts · leefstijl, memes, jongeren</div>
+        </div>
+      </div>
+      <div class="cluster-legend-item">
+        <div class="cl-dot" style="background:#5B4FCF"></div>
+        <div class="cl-info">
+          <div class="cl-name">Politiek betrokken Nederland</div>
+          <div class="cl-sub">88 accounts · politiek, activisme, opinie</div>
+        </div>
+      </div>
+      <div class="cluster-legend-item">
+        <div class="cl-dot" style="background:#D97B2C"></div>
+        <div class="cl-info">
+          <div class="cl-name">Gevestigde media & officiële kanalen</div>
+          <div class="cl-sub">11 accounts · NOS, RTL, regionale media</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="caveat-box">
+      <strong>Meetbeperking</strong>
+      Assen zijn berekend op basis van hashtag-gebruik door <em>producers</em> (content-makers), niet door kijkers. De algoritmische doorwerking naar individuele For You-pagina's is hier niet zichtbaar. Scores met 0 signal-hashtags vallen terug op neutrale waarde (0,5).
+    </div>
+  </div>
+</div>
+
+<script>
+// ── embedded data ────────────────────────────────────────────────────────────
+
+const CLUSTERS = {"1": {"id": "1", "name": "Gewoon Nederlands TikTok", "color": "#1D9E75", "depth": 0, "parent": null, "top_hashtags": ["fyp", "nederland", "viral", "amsterdam", "voorjou"], "cluster_id": "1", "account_count": 126, "tag_count": 2298, "political_lr": 0.76, "institutional_trust": 0.4285714285714286, "religious_identity": 0.05600522193211488, "bubble_closure": 0.263, "cultural_vs_political": 0.8044692737430168, "reach": 1.0, "reach_raw_followers": 12348121, "political_lr_raw": 0.52, "institutional_trust_raw": -0.14285714285714285, "religious_identity_raw": 0.009573542210617928, "cultural_vs_political_raw": 0.6089385474860335, "reach_raw": 16.329014544697912, "bubble_closure_raw": 0.263}, "1a": {"id": "1a", "name": "Moslimjongeren en religieuze leefstijl", "color": "#1D9E75", "depth": 1, "parent": "1", "top_hashtags": ["tiktoknl", "Ramadan", "moslim"], "cluster_id": "1a", "account_count": 45, "tag_count": 826, "political_lr": 0.6666666666666666, "institutional_trust": 0.0, "religious_identity": 0.15581113801452784, "bubble_closure": 0.477, "cultural_vs_political": 0.7692307692307692, "reach": 0.8057582951377914, "reach_raw_followers": 2741986, "political_lr_raw": 0.3333333333333333, "institutional_trust_raw": -1.0, "religious_identity_raw": 0.026634382566585957, "cultural_vs_political_raw": 0.5384615384615384, "reach_raw": 14.824193398028243, "bubble_closure_raw": 0.477}, "1b": {"id": "1b", "name": "Amsterdam, geschiedenis en Nederlandse trots", "color": "#1D9E75", "depth": 1, "parent": "1", "top_hashtags": ["netherlands", "geschiedenis", "amsterdamguide"], "cluster_id": "1b", "account_count": 43, "tag_count": 769, "political_lr": 0.5, "institutional_trust": 0.0, "religious_identity": 0.0, "bubble_closure": 0.3, "cultural_vs_political": 0.9117647058823529, "reach": 0.8776198928154392, "reach_raw_followers": 4784616, "political_lr_raw": 0.0, "institutional_trust_raw": -1.0, "religious_identity_raw": 0.0, "cultural_vs_political_raw": 0.8235294117647058, "reach_raw": 15.380916537868393, "bubble_closure_raw": 0.3}, "1c": {"id": "1c", "name": "Asiel en migratie in het nieuws", "color": "#1D9E75", "depth": 1, "parent": "1", "top_hashtags": ["azc", "loosdrecht", "media"], "cluster_id": "1c", "account_count": 28, "tag_count": 524, "political_lr": 0.9090909090909092, "institutional_trust": 0.75, "religious_identity": 0.0, "bubble_closure": 0.643, "cultural_vs_political": 0.8409090909090908, "reach": 0.7600156147357141, "reach_raw_followers": 1923808, "political_lr_raw": 0.8181818181818182, "institutional_trust_raw": 0.5, "religious_identity_raw": 0.0, "cultural_vs_political_raw": 0.6818181818181818, "reach_raw": 14.46981763293069, "bubble_closure_raw": 0.643}, "1d": {"id": "1d", "name": "Liverpool-fans en internationale voetbalbubbel", "color": "#1D9E75", "depth": 1, "parent": "1", "top_hashtags": ["liverpool", "liverpoolfc", "virgilvandijk"], "cluster_id": "1d", "account_count": 10, "tag_count": 179, "political_lr": 0.5, "institutional_trust": 0.5, "religious_identity": 0.0, "bubble_closure": 0.4, "cultural_vs_political": 0.6, "reach": 0.8128884738633665, "reach_raw_followers": 2897711, "political_lr_raw": 0.0, "institutional_trust_raw": 0.0, "religious_identity_raw": 0.0, "cultural_vs_political_raw": 0.2, "reach_raw": 14.879432018042369, "bubble_closure_raw": 0.4}, "2": {"id": "2", "name": "Politiek betrokken Nederland", "color": "#5B4FCF", "depth": 0, "parent": null, "top_hashtags": ["politiek", "nederland", "tweedekamer", "fvd", "pvv"], "cluster_id": "2", "account_count": 88, "tag_count": 1626, "political_lr": 0.5866666666666667, "institutional_trust": 0.1875, "religious_identity": 0.035977859778597784, "bubble_closure": 0.452, "cultural_vs_political": 0.11417322834645671, "reach": 0.8098693919622317, "reach_raw_followers": 2830722, "political_lr_raw": 0.17333333333333334, "institutional_trust_raw": -0.625, "religious_identity_raw": 0.006150061500615006, "cultural_vs_political_raw": -0.7716535433070866, "reach_raw": 14.856042714022523, "bubble_closure_raw": 0.452}, "2a": {"id": "2a", "name": "Islamkritisch en anti-EU", "color": "#5B4FCF", "depth": 1, "parent": "2", "top_hashtags": ["islam", "forumvoordemocratie", "europa"], "cluster_id": "2a", "account_count": 38, "tag_count": 698, "political_lr": 0.8285714285714285, "institutional_trust": 0.04999999999999999, "religious_identity": 0.07542979942693409, "bubble_closure": 0.696, "cultural_vs_political": 0.10416666666666669, "reach": 0.5050179936197808, "reach_raw_followers": 266814, "political_lr_raw": 0.6571428571428571, "institutional_trust_raw": -0.9, "religious_identity_raw": 0.012893982808022923, "cultural_vs_political_raw": -0.7916666666666666, "reach_raw": 12.49431081333227, "bubble_closure_raw": 0.696}, "2b": {"id": "2b", "name": "Lokale politiek en partijen", "color": "#5B4FCF", "depth": 1, "parent": "2", "top_hashtags": ["stemwijzer", "bbb", "gemeenteraad2026"], "cluster_id": "2b", "account_count": 30, "tag_count": 553, "political_lr": 0.28846153846153844, "institutional_trust": 0.0, "religious_identity": 0.01057866184448463, "bubble_closure": 0.625, "cultural_vs_political": 0.11475409836065575, "reach": 0.5870020422140853, "reach_raw_followers": 503557, "political_lr_raw": -0.4230769230769231, "institutional_trust_raw": -1.0, "religious_identity_raw": 0.0018083182640144665, "cultural_vs_political_raw": -0.7704918032786885, "reach_raw": 13.129454178150965, "bubble_closure_raw": 0.625}, "2c": {"id": "2c", "name": "Maatschappelijk ongenoegen en protest", "color": "#5B4FCF", "depth": 1, "parent": "2", "top_hashtags": ["loosdrecht", "capcut", "politie"], "cluster_id": "2c", "account_count": 20, "tag_count": 375, "political_lr": 0.5357142857142857, "institutional_trust": 0.5, "religious_identity": 0.0, "bubble_closure": 0.337, "cultural_vs_political": 0.1388888888888889, "reach": 0.7688665725244621, "reach_raw_followers": 2060351, "political_lr_raw": 0.07142857142857142, "institutional_trust_raw": 0.0, "religious_identity_raw": 0.0, "cultural_vs_political_raw": -0.7222222222222222, "reach_raw": 14.538387399954908, "bubble_closure_raw": 0.337}, "3": {"id": "3", "name": "Gevestigde media en officiële kanalen", "color": "#D97B2C", "depth": 0, "parent": null, "top_hashtags": ["politie", "nieuws", "trein", "buggenhout", "brand"], "cluster_id": "3", "account_count": 11, "tag_count": 220, "political_lr": 0.5, "institutional_trust": 0.5, "religious_identity": 0.0, "bubble_closure": 0.327, "cultural_vs_political": 0.6666666666666666, "reach": 0.7976900985225798, "reach_raw_followers": 2575843, "political_lr_raw": 0.0, "institutional_trust_raw": 0.0, "religious_identity_raw": 0.0, "cultural_vs_political_raw": 0.3333333333333333, "reach_raw": 14.7616878053664, "bubble_closure_raw": 0.327}, "3a": {"id": "3a", "name": "Vlaamse media in Nederland", "color": "#D97B2C", "depth": 1, "parent": "3", "top_hashtags": ["buggenhout", "ongeval", "weer"], "cluster_id": "3a", "account_count": 6, "tag_count": 120, "political_lr": 0.5, "institutional_trust": 0.5, "religious_identity": 0.0, "bubble_closure": 0.667, "cultural_vs_political": 0.6666666666666666, "reach": 0.7692762120499248, "reach_raw_followers": 2066900, "political_lr_raw": 0.0, "institutional_trust_raw": 0.0, "religious_identity_raw": 0.0, "cultural_vs_political_raw": 0.3333333333333333, "reach_raw": 14.541560942016153, "bubble_closure_raw": 0.667}, "3b": {"id": "3b", "name": "Nieuws en sportmedia", "color": "#D97B2C", "depth": 1, "parent": "3", "top_hashtags": ["brand", "eredivisie", "veiling"], "cluster_id": "3b", "account_count": 5, "tag_count": 100, "political_lr": 0.5, "institutional_trust": 0.5, "religious_identity": 0.0, "bubble_closure": 0.7, "cultural_vs_political": 0.5, "reach": 0.588375331864627, "reach_raw_followers": 508943, "political_lr_raw": 0.0, "institutional_trust_raw": 0.0, "religious_identity_raw": 0.0, "cultural_vs_political_raw": 0.0, "reach_raw": 13.14009326983369, "bubble_closure_raw": 0.7}};
+
+const AXES = [
+  { key: 'political_lr',         label: 'Links–Rechts',                  color: '#7ec8e3', loLabel: 'Links', hiLabel: 'Rechts' },
+  { key: 'institutional_trust',  label: 'Institutioneel vertrouwen',      color: '#e3a87e', loLabel: 'Wantrouwen', hiLabel: 'Vertrouwen' },
+  { key: 'religious_identity',   label: 'Religieuze identiteit',          color: '#b87ee3', loLabel: 'Seculier', hiLabel: 'Religieus' },
+  { key: 'bubble_closure',       label: 'Bubbel-geslotenheid',            color: '#7ee3b8', loLabel: 'Open', hiLabel: 'Gesloten' },
+  { key: 'cultural_vs_political',label: 'Cultureel vs. Politiek',         color: '#e3e37e', loLabel: 'Politiek', hiLabel: 'Cultureel' },
+  { key: 'reach',                label: 'Bereik (log. volgers)',           color: '#e37e7e', loLabel: 'Klein', hiLabel: 'Groot' },
+];
+
+// ── state ─────────────────────────────────────────────────────────────────────
+
+let xKey = 'political_lr';
+let yKey = 'institutional_trust';
+let showSub = false;
+
+// positions (animated)
+let positions = {};   // cid → { x, y, tx, ty }
+let animating = false;
+
+// ── init dropdowns ────────────────────────────────────────────────────────────
+
+function initDropdowns() {
+  ['x-axis', 'y-axis'].forEach((id, i) => {
+    const sel = document.getElementById(id);
+    AXES.forEach(ax => {
+      const opt = document.createElement('option');
+      opt.value = ax.key;
+      opt.textContent = ax.label;
+      sel.appendChild(opt);
+    });
+    sel.value = i === 0 ? xKey : yKey;
+  });
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function getVisibleClusters() {
+  return Object.values(CLUSTERS).filter(c => {
+    if (c.depth === 0) return true;
+    if (c.depth === 1 && showSub) return true;
+    return false;
+  });
+}
+
+function circleRadius(c) {
+  const { W } = getPlotDims();
+  const scale = Math.min(1, (W - 100) / 400); // shrink on narrow canvas
+  const base = showSub && c.depth === 1 ? 6 : 10;
+  const r = Math.max(base, Math.sqrt(c.account_count) * (c.depth === 0 ? 5 : 3.5));
+  return Math.min(r * Math.max(0.4, scale), c.depth === 0 ? 60 : 35);
+}
+
+function getPlotDims() {
+  const svg = document.getElementById('plot');
+  const rect = svg.getBoundingClientRect();
+  const pad = { top: 40, right: 40, bottom: 55, left: 60 };
+  return { W: rect.width, H: rect.height, pad };
+}
+
+function scalePoint(xv, yv, W, H, pad) {
+  // xv and yv are already 0-1 normalised
+  const x = pad.left + xv * (W - pad.right - pad.left);
+  const y = (H - pad.bottom) + yv * (pad.top - (H - pad.bottom));
+  return { x, y };
+}
+
+function getAxisDef(key) { return AXES.find(a => a.key === key); }
+
+// ── SVG drawing ───────────────────────────────────────────────────────────────
+
+function buildPlot(animate) {
+  const svg = document.getElementById('plot');
+  const { W, H, pad } = getPlotDims();
+  if (W === 0) return;
+
+  const clusters = getVisibleClusters();
+  const xDef = getAxisDef(xKey);
+  const yDef = getAxisDef(yKey);
+
+  // Compute target positions
+  const targets = {};
+  clusters.forEach(c => {
+    const xv = c[xKey] ?? 0.5;
+    const yv = c[yKey] ?? 0.5;
+    const pt = scalePoint(xv, yv, W, H, pad);
+    targets[c.id] = { tx: pt.x, ty: pt.y };
+
+    // Initialise positions on first render
+    if (!positions[c.id]) {
+      positions[c.id] = { x: W / 2, y: H / 2 };
+    }
+  });
+
+  if (!animate) {
+    // Snap to target
+    clusters.forEach(c => {
+      positions[c.id].x = targets[c.id].tx;
+      positions[c.id].y = targets[c.id].ty;
+    });
+    render(svg, W, H, pad, clusters, xDef, yDef);
+    return;
+  }
+
+  // Animate
+  const duration = 600;
+  const start = performance.now();
+  const from = {};
+  clusters.forEach(c => {
+    from[c.id] = { x: positions[c.id].x, y: positions[c.id].y };
+  });
+
+  function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
+
+  function frame(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const e = easeInOut(t);
+    clusters.forEach(c => {
+      positions[c.id].x = from[c.id].x + (targets[c.id].tx - from[c.id].x) * e;
+      positions[c.id].y = from[c.id].y + (targets[c.id].ty - from[c.id].y) * e;
+    });
+    render(svg, W, H, pad, clusters, xDef, yDef);
+    if (t < 1) requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+function render(svg, W, H, pad, clusters, xDef, yDef) {
+  const xLo = pad.left, xHi = W - pad.right;
+  const yLo = H - pad.bottom, yHi = pad.top;
+
+  // Build SVG
+  let html = `<defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>`;
+
+  // Grid lines
+  for (let i = 0; i <= 4; i++) {
+    const xv = xLo + (i / 4) * (xHi - xLo);
+    const yv = yLo + (i / 4) * (yHi - yLo);
+    html += `<line class="axis-line" x1="${xv}" y1="${yHi}" x2="${xv}" y2="${yLo}" stroke-dasharray="2 6"/>`;
+    html += `<line class="axis-line" x1="${xLo}" y1="${yv}" x2="${xHi}" y2="${yv}" stroke-dasharray="2 6"/>`;
+  }
+
+  // Axis lines (bold)
+  html += `<line x1="${xLo}" y1="${yLo}" x2="${xHi}" y2="${yLo}" stroke="#333" stroke-width="1"/>`;
+  html += `<line x1="${xLo}" y1="${yHi}" x2="${xLo}" y2="${yLo}" stroke="#333" stroke-width="1"/>`;
+
+  // X tick labels
+  ['0', '0.25', '0.5', '0.75', '1'].forEach((label, i) => {
+    const xv = xLo + (i / 4) * (xHi - xLo);
+    html += `<text class="axis-tick-label" x="${xv}" y="${yLo + 14}" text-anchor="middle">${label}</text>`;
+  });
+  // Y tick labels
+  ['0', '0.25', '0.5', '0.75', '1'].forEach((label, i) => {
+    const yv = yLo + (i / 4) * (yHi - yLo);
+    html += `<text class="axis-tick-label" x="${xLo - 6}" y="${yv}" text-anchor="end" dominant-baseline="central">${label}</text>`;
+  });
+
+  // X axis name + poles
+  html += `<text class="axis-name-label x-label" x="${(xLo + xHi) / 2}" y="${H - 8}" text-anchor="middle">${xDef.label}</text>`;
+  html += `<text class="axis-tick-label" x="${xLo}" y="${yLo + 26}" text-anchor="middle" fill="#5a6a70">← ${xDef.loLabel}</text>`;
+  html += `<text class="axis-tick-label" x="${xHi}" y="${yLo + 26}" text-anchor="middle" fill="#5a6a70">${xDef.hiLabel} →</text>`;
+
+  // Y axis name (rotated)
+  html += `<text class="axis-name-label y-label" x="${-H / 2}" y="${14}" text-anchor="middle" transform="rotate(-90)">${yDef.label}</text>`;
+  html += `<text class="axis-tick-label" x="${xLo - 14}" y="${yLo}" text-anchor="middle" transform="rotate(-90, ${xLo - 14}, ${yLo})" fill="#6a5a50">← ${yDef.loLabel}</text>`;
+  html += `<text class="axis-tick-label" x="${xLo - 14}" y="${yHi}" text-anchor="middle" transform="rotate(-90, ${xLo - 14}, ${yHi})" fill="#6a5a50">${yDef.hiLabel} →</text>`;
+
+  // Parent-child lines (for sub-clusters)
+  if (showSub) {
+    clusters.filter(c => c.depth === 1).forEach(c => {
+      const parent = clusters.find(p => p.id === c.parent);
+      if (!parent || !positions[c.id] || !positions[parent.id]) return;
+      html += `<line class="parent-line"
+        x1="${positions[parent.id].x}" y1="${positions[parent.id].y}"
+        x2="${positions[c.id].x}" y2="${positions[c.id].y}"
+        stroke="${c.color}"/>`;
+    });
+  }
+
+  // Circles (macro behind sub)
+  const sortedClusters = [...clusters].sort((a, b) => b.depth - a.depth || b.account_count - a.account_count);
+
+  // Glow rings for macro clusters
+  clusters.filter(c => c.depth === 0).forEach(c => {
+    const pos = positions[c.id];
+    if (!pos) return;
+    const r = circleRadius(c);
+    html += `<circle cx="${pos.x}" cy="${pos.y}" r="${r + 6}" fill="${c.color}" opacity="0.06"/>`;
+    html += `<circle cx="${pos.x}" cy="${pos.y}" r="${r + 2}" fill="none" stroke="${c.color}" stroke-width="1" opacity="0.2"/>`;
+  });
+
+  sortedClusters.forEach(c => {
+    const pos = positions[c.id];
+    if (!pos) return;
+    const r = circleRadius(c);
+    const opacity = c.depth === 1 ? 0.75 : 1;
+
+    html += `<circle
+      class="cluster-circle"
+      data-id="${c.id}"
+      cx="${pos.x}" cy="${pos.y}" r="${r}"
+      fill="${c.color}"
+      fill-opacity="${opacity}"
+      stroke="${c.depth === 1 ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.3)'}"
+      stroke-width="${c.depth === 0 ? 2 : 1}"
+    />`;
+  });
+
+  // Labels
+  sortedClusters.forEach(c => {
+    const pos = positions[c.id];
+    if (!pos) return;
+    const r = circleRadius(c);
+    const lines = wrapLabel(c.name, c.depth === 0 ? 18 : 14);
+    const lineH = c.depth === 0 ? 14 : 11;
+    const totalH = lines.length * lineH;
+    lines.forEach((line, i) => {
+      const dy = -totalH / 2 + i * lineH + lineH / 2;
+      html += `<text
+        class="cluster-label ${c.depth === 1 ? 'small' : ''}"
+        x="${pos.x}" y="${pos.y + dy}"
+        data-id="${c.id}"
+      >${line}</text>`;
+    });
+    // ID badge
+    if (c.depth === 1) {
+      html += `<text x="${pos.x + r - 2}" y="${pos.y - r + 2}"
+        text-anchor="end" dominant-baseline="hanging"
+        font-size="9" fill="rgba(255,255,255,0.5)" font-family="monospace">${c.id}</text>`;
+    }
+  });
+
+  svg.innerHTML = html;
+
+  // Attach events
+  svg.querySelectorAll('.cluster-circle, .cluster-label').forEach(el => {
+    el.addEventListener('mouseenter', e => showTooltip(e, el.dataset.id));
+    el.addEventListener('mousemove', e => moveTooltip(e));
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+function wrapLabel(name, maxLen) {
+  const words = name.split(' ');
+  const lines = [];
+  let current = '';
+  words.forEach(w => {
+    if ((current + ' ' + w).trim().length > maxLen && current) {
+      lines.push(current.trim());
+      current = w;
+    } else {
+      current = (current + ' ' + w).trim();
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
+// ── tooltip ───────────────────────────────────────────────────────────────────
+
+let lastMouseX = 0, lastMouseY = 0;
+
+function showTooltip(e, cid) {
+  const c = CLUSTERS[cid];
+  if (!c) return;
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+
+  const AXIS_LABELS = {
+    political_lr: 'Links–Rechts',
+    institutional_trust: 'Inst. vertrouwen',
+    religious_identity: 'Religieus',
+    bubble_closure: 'Geslotenheid',
+    cultural_vs_political: 'Cultureel/politiek',
+    reach: 'Bereik',
+  };
+
+  const AXIS_COLORS = {
+    political_lr: '#7ec8e3',
+    institutional_trust: '#e3a87e',
+    religious_identity: '#b87ee3',
+    bubble_closure: '#7ee3b8',
+    cultural_vs_political: '#e3e37e',
+    reach: '#e37e7e',
+  };
+
+  const tags = (c.top_hashtags || []).map(t =>
+    `<span class="tt-tag">#${t}</span>`
+  ).join('');
+
+  const scores = Object.entries(AXIS_LABELS).map(([key, label]) => {
+    const val = c[key] ?? 0.5;
+    const pct = Math.round(val * 100);
+    const col = AXIS_COLORS[key];
+    const isActive = key === xKey || key === yKey;
+    return `<div class="tt-score-row" style="${isActive ? 'opacity:1' : 'opacity:0.6'}">
+      <span class="tt-score-key">${label}</span>
+      <div class="tt-score-bar"><div class="tt-score-fill" style="width:${pct}%;background:${col}"></div></div>
+      <span class="tt-score-val" style="color:${col}">${val.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+
+  const depthLabel = c.depth === 0 ? 'macro-cluster' : 'sub-cluster';
+  const reachK = c.reach_raw_followers >= 1e6
+    ? (c.reach_raw_followers / 1e6).toFixed(1) + 'M'
+    : (c.reach_raw_followers / 1e3).toFixed(0) + 'K';
+
+  document.getElementById('tooltip').innerHTML = `
+    <div class="tt-header">
+      <div class="tt-dot" style="background:${c.color}"></div>
+      <div>
+        <div class="tt-name">${c.name}</div>
+        <div class="tt-id">${c.id} · ${depthLabel}</div>
+      </div>
+    </div>
+    <div class="tt-tags">${tags}</div>
+    <div class="tt-scores">${scores}</div>
+    <div class="tt-size">
+      <span>${c.account_count} accounts</span>
+      <span>${reachK} volgers</span>
+    </div>
+  `;
+
+  document.getElementById('tooltip').classList.add('visible');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const tt = document.getElementById('tooltip');
+  const wrap = document.getElementById('canvas-wrap');
+  const rect = wrap.getBoundingClientRect();
+  let x = e.clientX - rect.left + 16;
+  let y = e.clientY - rect.top + 16;
+  if (x + 300 > rect.width) x = e.clientX - rect.left - 296;
+  if (y + 340 > rect.height) y = e.clientY - rect.top - 336;
+  tt.style.left = x + 'px';
+  tt.style.top  = y + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+// ── controls ──────────────────────────────────────────────────────────────────
+
+function updateAxes() {
+  xKey = document.getElementById('x-axis').value;
+  yKey = document.getElementById('y-axis').value;
+  buildPlot(true);
+}
+
+function toggleLegend() {
+  const leg = document.getElementById('legend');
+  leg.classList.toggle('collapsed');
+  // Trigger re-render after transition
+  setTimeout(() => buildPlot(false), 260);
+}
+
+function toggleSubclusters() {
+  showSub = !showSub;
+  const btn = document.getElementById('toggle-sub');
+  btn.classList.toggle('active', showSub);
+  buildPlot(true);
+}
+
+// ── resize ────────────────────────────────────────────────────────────────────
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => buildPlot(false), 100);
+});
+
+// ── boot ──────────────────────────────────────────────────────────────────────
+
+initDropdowns();
+
+// Use ResizeObserver so we render once the SVG has actual dimensions
+const ro = new ResizeObserver(entries => {
+  for (const e of entries) {
+    if (e.contentRect.width > 50) {
+      buildPlot(false);
+    }
+  }
+});
+ro.observe(document.getElementById('plot'));
+</script>
+</body>
+</html>

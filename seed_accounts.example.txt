@@ -1,0 +1,13 @@
+# Copy this file to seed_accounts.txt and add your own seed handles.
+# seed_accounts.txt is gitignored and never committed.
+#
+# Seed accounts are the largest Dutch TikTok creators, taken from public
+# influencer-ranking sites (e.g. HypeAuditor, Modash, Marketingreport.nl),
+# plus any specific accounts you want to anchor the collection on.
+#
+# Format: one TikTok handle per line (no leading @). Lines starting with '#'
+# are ignored. Bootstrap also works from SEED_HASHTAGS alone if this is empty.
+
+# example_creator_one
+# example_creator_two
+# example_political_account

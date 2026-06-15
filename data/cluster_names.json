@@ -1,0 +1,902 @@
+{
+  "_note": "Names matched by hashtag fingerprint, not position label — robust to Louvain reshuffling.",
+  "_format": "Values are objects with 'name' (required) and 'description' (optional free text).",
+  "macro": {
+    "politiek,tweedekamer,pvv": {
+      "name": "Politiek betrokken Nederland",
+      "description": "De brede politieke bubbel op Nederlands TikTok. Van PVV tot D66 — wat ze bindt is dat ze de Tweede Kamer volgen. Als je hier zit, gaat je tijdlijn over kabinetscrises, partijposities en verkiezingen. Je ziet nauwelijks lifestyle of entertainment."
+    },
+    "fyp,voorjou,amsterdam": {
+      "name": "Gewoon Nederlands TikTok",
+      "description": "De grootste bubbel — het niet-politieke hart van Nederlands TikTok. Jongeren, stadsleven, memes, eten en trending audio. Algoritmisch centraal: accounts hier verschijnen op For You-pagina's van alle andere bubbels. Je ziet alles een beetje, maar niets heel diep."
+    },
+    "nieuws,politie,oranje": {
+      "name": "Gevestigde media en officiële kanalen",
+      "description": "NOS, RTL, regionale omroepen en institutionele accounts. Nieuws, breaking updates, officiële verklaringen. De informatie-ruggengraat die politieke en lifestyle-bubbels verbindt — maar eerder een doorgeefluik dan een gemeenschap."
+    },
+    "foryou,fyp,nederland,viral,voorjou": {
+      "name": "Dutch TikTok Mainstream Creators",
+      "description": "Dutch content creators sharing viral content across lifestyle, sports, and entertainment with broad appeal."
+    },
+    "fvd,nederland,politiek,pvv,tweedekamer": {
+      "name": "Dutch Political News and Commentary",
+      "description": "Dutch TikTok creators sharing political news, election coverage, and commentary on Netherlands governance and current affairs."
+    },
+    "amsterdam,fyp,nederland,netherlands,rotterdam": {
+      "name": "Dutch Mainstream Media and Culture",
+      "description": "Major Dutch news outlets, cultural creators, and influencers covering politics, sports, and national identity on TikTok."
+    },
+    "buggenhout,ongeval,politiek,regering,vlaanderen": {
+      "name": "Dutch News and Current Affairs",
+      "description": "News organizations and journalists covering politics, accidents, and current events across Netherlands and Flanders"
+    },
+    "foryou,foryoupage,fyp,viral,voorjou": {
+      "name": "Dutch Viral Content Creators",
+      "description": "Dutch TikTok creators making viral entertainment content across humor, sports, and pop culture trends."
+    },
+    "fyp,nederland,politiek,pvv,verkiezingen": {
+      "name": "Dutch Political News and Commentary",
+      "description": "Dutch TikTokers sharing political news, election coverage, and commentary on national governance and policy debates."
+    },
+    "amsterdam,dutch,fyp,nederland,netherlands": {
+      "name": "Dutch Mainstream Media and Politics",
+      "description": "News outlets, journalists, and political commentators creating current events content for Dutch and European audiences."
+    },
+    "fyp,nederland,oranje,voetbal,wk": {
+      "name": "Dutch Popular Culture and Sports",
+      "description": "Dutch TikTok users sharing content about football, entertainment, news, and lifestyle across Netherlands and Belgium."
+    }
+  },
+  "sub": {
+    "tiktoknl,ramadan,moslim": {
+      "name": "Moslimjongeren en religieuze leefstijl",
+      "description": "Nederlandstalige moslim-creators die religieuze beleving combineren met TikTok-jeugdcultuur. Ramadan-content, islamitische normen en waarden, herkenbare moslim-humor. Eigen bubbel binnen de lifestyle-macro — meer intern gericht dan politiek."
+    },
+    "netherlands,geschiedenis,amsterdamguide": {
+      "name": "Amsterdam, geschiedenis en Nederlandse trots",
+      "description": "Accounts over Nederlandse cultuur, stadsesthetiek en vaderlandse geschiedenis. Mix van expat-gidsen, WO2-educators en Hollandse trots-content. De brug tussen toeristische Amsterdam en cultureel-nationale identiteit."
+    },
+    "azc,loosdrecht,media": {
+      "name": "Asiel en migratie in het nieuws",
+      "description": "Accounts die asielbeleid, AZC-plaatsingen en de Loosdrecht-protesten volgen. Mix van journalisten, buurtbewoners en beleidsvolgers. Niet uniform anti-asiel — zowel verslaggevers als activisten zitten hier, wat de bubbel intern verdeeld maakt."
+    },
+    "liverpool,liverpoolfc,virgilvandijk": {
+      "name": "Liverpool FC Dutch Supporters",
+      "description": "Dutch TikTok fans united by support for Liverpool FC and players like Virgil van Dijk"
+    },
+    "islam,forumvoordemocratie,europa": {
+      "name": "Islamkritisch en anti-EU",
+      "description": "Bubbel die islamkritiek combineert met Euroscepsis en Forum voor Democratie-sympathie. Inhoud gaat over culturele identiteit, 'de grenzen dicht' en wantrouwen jegens Europese instituties. De meest gesloten bubbel binnen de politieke macro-cluster."
+    },
+    "stemwijzer,bbb,gemeenteraad2026": {
+      "name": "Lokale politiek en partijen",
+      "description": "Politici en partijaccounts die lokale en nationale verkiezingen bespelen: stemwijzers, BBB, gemeenteraadsdebatten. Pragmatischer en minder ideologisch dan de PVV/FVD-clusters — gericht op beleid, niet op cultuurstrijd."
+    },
+    "loosdrecht,capcut,politie": {
+      "name": "Maatschappelijk ongenoegen en protest",
+      "description": "Accounts die maatschappelijke onrust vertalen naar TikTok-protest. Loosdrecht als symbool, politie-kritiek, burgeractivisme. Tussen nieuwsverslaggeving en activisme in — partijloos maar duidelijk anti-establishment."
+    },
+    "buggenhout,ongeval,weer": {
+      "name": "Vlaamse media in Nederland",
+      "description": "Belgische Nederlandstalige media (VRT NWS, VTM Nieuws) en Vlaamse creators met grensoverschrijkend bereik op Nederlands TikTok. Gedeelde taal, gedeeltelijk gedeeld politiek frame — maar Belgische context maakt het een eigen eiland."
+    },
+    "brand,eredivisie,veiling": {
+      "name": "Nieuws en sportmedia",
+      "description": "Nieuwsmedia-accounts die sport en actueel nieuws combineren. Eredivisie, veiling-drama, brand-nieuws — de casualere kant van het gevestigde media-ecosysteem."
+    },
+    "verkiezingen,kabinet,bbb": {
+      "name": "Politici en Kamerleden in eigen woord",
+      "description": "Gekozen politici die zelf posten: Kamerleden, wethouders, partijwoordvoerders van alle partijen. Persoonlijke noot, Kamer-behind-the-scenes, direct contact met kiezers."
+    },
+    "dilanyesilgoz,teamvvd,veiligheid": {
+      "name": "VVD: wet, orde en liberale waarden",
+      "description": "Officiële VVD-accounts en nauwe bondgenoten. Inhoud draait om Dilan Yeşilgöz, veiligheid en rechts-liberale positionering."
+    },
+    "geertwilders,omroepwnl,europa": {
+      "name": "Rechts-populistisch mediasysteem",
+      "description": "Het PVV-aangrenzende media-ecosysteem: Omroep WNL, GeenStijl-gelieerde accounts, Wilders-versterkers. Eurosceptisch, anti-migratie, vijandig tegenover mainstream media."
+    },
+    "thierrybaudet,fryslanfvd,debat": {
+      "name": "Forum voor Democratie en de complothoek",
+      "description": "FVD-grassroots accounts, ook regionale Friese FVD-stemmen. Conspiracy-adjacent content, Forum-intellectueel frame en Baudet-clips."
+    },
+    "grammatica,snackbar,patat": {
+      "name": "Frituur, grappen en Hollandse trots",
+      "description": "Uitgesproken Nederlandse internethumor — snackbarcultuur, taalgrappen, Hollandse trots. De grappig-maar-ook-culturele lane."
+    },
+    "moslim,islam,stemmen": {
+      "name": "Moslims en politieke stem",
+      "description": "Accounts die spreken vanuit een expliciet Nederlands-moslimperspectief op politiek: stemmen, vertegenwoordiging, discriminatie, buitenlands beleid (met name Gaza)."
+    },
+    "oranje,eredivisie,fifaworldcup": {
+      "name": "Voetbalmedia en Oranje",
+      "description": "Professionele voetbalmedia over het Nederlands elftal, de Eredivisie en grote internationale toernooien."
+    },
+    "fvd,thierrybaudet,forumvoordemocratie": {
+      "name": "Nationalistisch rechts",
+      "description": "FVD-kern en directe sympathisanten. Baudet-clips, Forum-debatten, eurosceptische en nationalist-conservatieve posities. Niet als 'extreemrechts' gelabeld — het cluster wordt door leden zelf als nationalistisch en soevereinistisch omschreven."
+    },
+    "mening,cultuur,vrouwen": {
+      "name": "Geopolitiek en islamitische cultuur",
+      "description": "Accounts die islam, Europa en geopolitieke spanningen bespreken — vaak via de lens van cultuur, gender en westerse waarden. De Palestine-kwestie en de islam-Europadiscussie lopen door elkaar, soms gecombineerd, soms apart. Geen uniforme politieke lijn."
+    },
+    "stemmen,groenlinks,stemwijzer": {
+      "name": "Links-progressief",
+      "description": "GroenLinks, PvdA en geestverwante accounts die stemgedrag, sociale rechtvaardigheid en progressieve politiek bespreekbaar maken. Stemwijzer als symbool: rationeel kiezen, niet radicaliseren."
+    },
+    "benzine,dilanyesilgoz,benzineprijs": {
+      "name": "VVD en economisch beleid",
+      "description": "Accounts rondom Dilan Yeşilgöz en VVD-economisch beleid: brandstofprijzen, koopkracht, veiligheid. Zakelijke toon, liberaal-conservatieve frame."
+    },
+    "palestina,freepalestine,palestine": {
+      "name": "Pro-Palestina activisme",
+      "description": "Nederlandstalige accounts die de Gaza-situatie volgen vanuit solidariteitsperspectief. Valt samen met maar is niet identiek aan de moslim-identiteitsbubbel — ook niet-moslims zijn hier actief."
+    },
+    "fypシ,dutch,vjp": {
+      "skip": true,
+      "name": null,
+      "description": "Engagement-tags zonder community-signaal — niet als bubbel tonen."
+    },
+    "trend,relateable,herkenbaar": {
+      "skip": true,
+      "name": null,
+      "description": "Engagement-tags zonder community-signaal — niet als bubbel tonen."
+    },
+    "OOTD,vj,voorjou": {
+      "name": "Dutch TikTok Mainstream Content Creators",
+      "description": "Diverse Dutch creators sharing lifestyle, humor, and news content across fashion, sports, and entertainment on the For You Page."
+    },
+    "dutch,fypシ,tiktoknl": {
+      "name": "Dutch TikTok Mainstream Creators",
+      "description": "Diverse Dutch content creators spanning entertainment, tech, and lifestyle with broad appeal across TikTok NL platform."
+    },
+    "nederlandsetiktok,pov,voetbal": {
+      "name": "Dutch Football and Culture Commentary",
+      "description": "Dutch TikTokers creating relatable football-focused content mixed with cultural and news commentary for local audiences."
+    },
+    "Ramadan,herkenbaar,wk": {
+      "name": "Dutch Muslim Content Creators",
+      "description": "Dutch TikTokers sharing relatable Muslim lifestyle content, particularly around Ramadan and cultural experiences."
+    },
+    "grapje,lachen,leuk": {
+      "name": "Dutch Humor and Comedy Creators",
+      "description": "Content creators sharing funny videos and jokes, unified by humor-focused entertainment for Dutch TikTok audiences."
+    },
+    "2026,amsterdam,school": {
+      "name": "Amsterdam Youth School Community 2026",
+      "description": "Dutch TikTok creators focused on school life, Amsterdam youth culture, and content for the 2026 generation."
+    },
+    "snow,voorjou,voorjoupagina": {
+      "name": "Dutch For You Page Creators",
+      "description": "Small Dutch TikTok creators sharing viral content through For You Page algorithms with lifestyle and entertainment focus."
+    },
+    "dutchtiktok,voorjou,voorjoupagina": {
+      "name": "Dutch TikTok For You Page Creators",
+      "description": "Dutch content creators leveraging algorithm-driven viral strategies to build audiences through entertainment and cultural commentary."
+    },
+    "FoodTok,fypage,iphone": {
+      "name": "Dutch iPhone Food Content Creators",
+      "description": "Small group of Dutch TikTokers sharing food content and lifestyle videos, united by iPhone aesthetics and FYP virality focus."
+    },
+    "liverpool,liverpoolfc,vvd": {
+      "name": "Dutch Liverpool FC Supporters",
+      "description": "Dutch TikTok users united by their passion for Liverpool FC and players like Virgil van Dijk"
+    },
+    "breda,nl,uitspraak": {
+      "name": "Dutch Language and Pronunciation Enthusiasts",
+      "description": "Dutch TikTokers focused on language, pronunciation, and regional Dutch culture, centered around Netherlands discourse."
+    },
+    "fyp,netherlands,viral": {
+      "name": "Dutch Viral Content Creators",
+      "description": "Small tight-knit group of Dutch TikTok creators focused on viral content and local community engagement."
+    },
+    "feyenoord,parfum,tiktok": {
+      "name": "Dutch Mainstream Culture and Humor",
+      "description": "Dutch TikTok creators blending sports, satire, lifestyle and viral content for broad audiences."
+    },
+    "creatorsearchinsights,foryoupage,viraltiktok": {
+      "name": "Dutch Viral Content Creators",
+      "description": "Amsterdam-based TikTok creators focused on maximizing reach through trending formats and algorithm optimization strategies."
+    },
+    "amsterdam,like,tiktok": {
+      "name": "Amsterdam TikTok Lifestyle Creators",
+      "description": "Dutch content creators based in Amsterdam sharing lifestyle, humor, and daily life content for engagement-focused audiences."
+    },
+    "meme,nederlands,parfum": {
+      "name": "Dutch Beauty and Humor Creators",
+      "description": "Dutch TikTok creators blending beauty content, fragrance reviews, and meme humor for mainstream audiences."
+    },
+    "k3,tiktok,voorjou": {
+      "name": "Dutch TikTok Mainstream Content Creators",
+      "description": "Small cluster of Dutch TikTok creators posting diverse popular content across entertainment, humor, and trending topics."
+    },
+    "fyppppppppppppppppppppppp,ondernemen,viralvideo": {
+      "name": "Dutch Viral Content Entrepreneurs",
+      "description": "Dutch creators focused on viral trends and entrepreneurial content, seeking algorithmic reach through strategic hashtag use."
+    },
+    "foryou,fy,viralvideo": {
+      "name": "Dutch Viral Content Creators",
+      "description": "Emerging Dutch TikTokers creating diverse viral content across humor, culture, and lifestyle topics."
+    },
+    "Ramadan,dutchtiktok,grappig": {
+      "name": "Dutch Muslim Comedy Creators",
+      "description": "Dutch TikTok creators sharing humorous content within Muslim and Islamic cultural contexts during Ramadan and beyond."
+    },
+    "Love,foryoupage,viralvideo": {
+      "name": "Dutch Viral Content Creators",
+      "description": "Small network of Dutch TikTokers focused on creating shareable, trend-driven content for viral reach and engagement."
+    },
+    "fyppppppppppppppppppppppp,niche,trend": {
+      "name": "Dutch Trend Chasers",
+      "description": "Small Dutch TikTok creators focused on viral trends and niche content discovery with growth-oriented posting strategies."
+    },
+    "ai,sport,tiktoknl": {
+      "name": "Dutch Sports and AI Tech Creators",
+      "description": "Dutch TikTok creators blending sports content with artificial intelligence and tech innovation interests."
+    },
+    "18maart,resse,stemwijzer": {
+      "name": "Dutch Political Activism and Civic Engagement",
+      "description": "Dutch TikTokers focused on political participation, activism, and civic engagement around elections and social issues."
+    },
+    "denk,jetten,palestina": {
+      "name": "DENK Party Political Community",
+      "description": "Dutch TikTok users supporting DENK party, engaging with Palestinian solidarity and political commentary"
+    },
+    "foryou,resse,robjetten": {
+      "name": "Dutch Political Commentary and Election Engagement",
+      "description": "Dutch TikTokers focused on politics, elections, and commentary featuring prominent figures like Rob Jetten and regional content creators."
+    },
+    "fyp,resse,verkiezingen": {
+      "name": "Rob Jetten Political Fan Community",
+      "description": "Dutch TikTok users focused on VVD politics and Rob Jetten, engaging with election content and political discourse."
+    },
+    "18maart,azc,marcoborsato": {
+      "name": "Dutch Progressive Politics and Social Activism",
+      "description": "Left-leaning Dutch activists engaged in political advocacy, social justice causes, and commentary on immigration and civic participation."
+    },
+    "18maart,rotterdam,stemmen": {
+      "name": "Dutch Left-Wing Political Activists",
+      "description": "Progressive Dutch politicians and activists organizing around March 18 elections and Rotterdam-based political campaigns."
+    },
+    "fvd,lidewijdevos,thierrybaudet": {
+      "name": "Dutch Right-Wing Political Commentary",
+      "description": "Accounts focused on FVD politics, Dutch governance criticism, and conservative political discourse on TikTok."
+    },
+    "fyp,israel,maatschappij": {
+      "name": "Dutch Social Commentary and Civic Discourse",
+      "description": "Dutch TikTokers discussing politics, society, and current events including Israel-related topics with civic engagement focus."
+    },
+    "democratie,nieuws,verkiezingen": {
+      "name": "Dutch Political News and Elections",
+      "description": "Dutch TikTok creators focused on politics, elections, and democratic discourse in the Netherlands."
+    },
+    "amsterdam,femkehalsema,voc": {
+      "name": "Amsterdam Political Commentary Creators",
+      "description": "Dutch TikTokers focused on Amsterdam politics and governance, discussing local issues and political figures."
+    },
+    "ai,mannen,mening": {
+      "name": "Dutch Progressive Opinion Leaders",
+      "description": "Dutch journalists and commentators sharing critical perspectives on politics, society, and current affairs."
+    },
+    "journalistiek,mannen,media": {
+      "name": "Dutch Progressive News and Commentary",
+      "description": "Journalists and media creators focused on progressive Dutch news, politics, and cultural commentary on TikTok."
+    },
+    "europa,mannen,vrouwen": {
+      "name": "Dutch Progressive Politics and Social Commentary",
+      "description": "Dutch TikTok creators focused on progressive political discourse, gender issues, and European social commentary with journalistic and advocacy approaches."
+    },
+    "humor,islam,moslims": {
+      "name": "Dutch Muslim Humor and Politics",
+      "description": "Dutch Muslim creators making humorous and political content about Islam, Muslim life, and Dutch society."
+    },
+    "azc,europe,protest": {
+      "name": "Dutch Asylum and Migration Activists",
+      "description": "Content creators and news outlets covering asylum center protests and European migration policy issues."
+    },
+    "kapitalisme,palestina,rodelijn": {
+      "name": "Dutch Left-Wing Political Commentary",
+      "description": "Progressive Dutch creators discussing capitalism, politics, and Palestine through news commentary and cultural critique."
+    },
+    "asielzoekers,coa,oekraine": {
+      "name": "Dutch Asylum and Migration Coverage",
+      "description": "News creators and broadcasters focused on asylum seekers, COA facilities, and Ukrainian refugee coverage in the Netherlands."
+    },
+    "azc,islam,moslim": {
+      "name": "Dutch Islamic Community Activists",
+      "description": "Dutch Muslim creators discussing Islam, immigration policy, and social issues affecting Muslim communities."
+    },
+    "iran,joostklein,pvv": {
+      "name": "Dutch Political Commentary and News",
+      "description": "Dutch TikTokers creating political commentary and news content, focused on domestic politics and current events discussion."
+    },
+    "debat,pvv,vandaaginside": {
+      "name": "Dutch Political Commentary and Debate",
+      "description": "Dutch TikTokers creating political commentary and debate content, centered around current events and news discussion."
+    },
+    "azc,media,politie": {
+      "name": "Dutch Migration and Policy Critics",
+      "description": "Activists and media figures critiquing Dutch asylum and immigration policies, particularly around reception centers."
+    },
+    "media,politie,veiligheid": {
+      "name": "Dutch Media and Security Critics",
+      "description": "Content creators focused on Dutch media coverage, police practices, and security policy discussions on TikTok."
+    },
+    "oranje,wk,zomer": {
+      "name": "Dutch Sports and National Pride",
+      "description": "Dutch TikTokers united by national sports events, particularly football tournaments and summer celebrations centered on Team Orange."
+    },
+    "bidalargu,curacao,ronaldkoeman": {
+      "name": "Dutch Sports and Caribbean News Watchers",
+      "description": "Dutch news and sports accounts covering Netherlands football, Caribbean sports, and current events for engaged audiences."
+    },
+    "amsterdamguide,kingsday,tulips": {
+      "name": "Amsterdam Tourism and Dutch Culture",
+      "description": "Content creators sharing guides, travel tips, and cultural highlights about Amsterdam and Dutch lifestyle for international audiences."
+    },
+    "amsterdamguide,fyp,tulips": {
+      "name": "Amsterdam Travel and Local Guides",
+      "description": "Dutch TikTokers creating travel guides and local content centered on Amsterdam, tulips, and Dutch culture"
+    },
+    "dutchlife,nieuws,travel": {
+      "name": "Dutch Lifestyle and News Creators",
+      "description": "Dutch content creators sharing lifestyle, travel, and news updates with local audience focus"
+    },
+    "gelredome,rotterdam,suzanenfreek": {
+      "name": "Dutch Mainstream News and Culture",
+      "description": "Dutch TikTok creators sharing news, regional culture, and entertainment content for broad Dutch audiences."
+    },
+    "audi,nederlandsetiktok,watertaxi": {
+      "name": "Dutch Urban Lifestyle Content Creators",
+      "description": "Dutch TikTok creators sharing everyday urban content including transport, lifestyle, and automotive interests with local audience."
+    },
+    "buggenhout,nieuws,ongeval": {
+      "name": "Dutch News and Local Updates",
+      "description": "News outlets and journalists sharing breaking news, accidents, and local events from the Netherlands and Belgium."
+    },
+    "onderwijs,vlaanderen,zuhaldemir": {
+      "name": "Flemish Education and Politics Activists",
+      "description": "Belgian Dutch-speaking activists and politicians focused on education policy and Flemish regional interests."
+    },
+    "grapje,grappig,vj": {
+      "name": "Dutch Comedy and Humor Creators",
+      "description": "Young Dutch TikTokers creating humorous content across politics, education, relationships, and cultural commentary."
+    },
+    "fvd,fypシ,moslim": {
+      "name": "Dutch Muslim and Political Commentary Creators",
+      "description": "Dutch TikTok creators discussing Islam, politics, and current events with humor and social commentary."
+    },
+    "Summer,lachen,vakantie": {
+      "name": "Dutch Summer Humor and Leisure",
+      "description": "Dutch TikTokers sharing lighthearted content centered on vacation, summer vibes, and comedic moments with their audiences."
+    },
+    "fraude,presenthiernu,veriftools": {
+      "name": "Fraud Awareness and Verification Activists",
+      "description": "Dutch TikTokers exposing online fraud schemes and promoting account verification tools and awareness."
+    },
+    "politiek,vjp,voorjoupagina": {
+      "name": "Dutch Political Commentary Content Creators",
+      "description": "Dutch TikTokers creating political and social commentary content for the For You Page audience."
+    },
+    "jesus,jezus,opwekking": {
+      "name": "Dutch Christian Faith Creators",
+      "description": "Dutch TikTok creators sharing Christian testimony and religious content centered on Jesus and faith awakening."
+    },
+    "islam,moslim,moslimtiktok": {
+      "name": "Dutch Muslim TikTok Community",
+      "description": "Dutch-speaking Muslim creators sharing content about Islam, faith, and Muslim life in the Netherlands."
+    },
+    "juf,meester,onderwijs": {
+      "name": "Dutch Education Content Creators",
+      "description": "Teachers and educators sharing classroom experiences, teaching tips, and educational content for Dutch audiences."
+    },
+    "nieuws,voetbal,voorjoupagina": {
+      "name": "Dutch Sports and News Enthusiasts",
+      "description": "Football fans and news consumers sharing sports updates and current events on Dutch TikTok"
+    },
+    "nieuws,nmbs,trein": {
+      "name": "Dutch News and Public Transport",
+      "description": "Dutch TikTokers sharing news updates, train information, and public transport content for local audiences."
+    },
+    "k3,makeup,teachertok": {
+      "name": "Dutch Teacher Creators",
+      "description": "Dutch educators sharing classroom content, K3 fandom, and makeup trends on TikTok."
+    },
+    "bovenbouw,meester,vakantie": {
+      "name": "Dutch Primary School Teachers",
+      "description": "Primary school educators sharing classroom content, teaching tips, and holiday moments with their student communities."
+    },
+    "lachen,live,vj": {
+      "name": "Dutch Live Entertainment and Comedy Creators",
+      "description": "Dutch TikTok creators focused on live streaming, humor content, and entertainment with VJ-style performances."
+    },
+    "hardcore,interview,langlevedeliefde": {
+      "name": "Dutch Hardcore Interview Content Creators",
+      "description": "Dutch TikTokers creating interview and hardcore content focused on long-term relationships and nostalgic cultural commentary."
+    },
+    "comedy,nl,voorjou": {
+      "name": "Dutch Comedy Content Creators",
+      "description": "Small group of Dutch TikTok creators making humorous videos for the For You Page algorithm."
+    },
+    "belgium,interview,nl": {
+      "name": "Dutch Belgian Interview and Commentary",
+      "description": "Dutch and Belgian content creators focused on interviews, current affairs commentary, and cultural discussion."
+    },
+    "benbvolliefde,grappigefilmpjes,voorjoupagina": {
+      "name": "Dutch Funny Video Creators",
+      "description": "Content creators sharing humorous short-form videos for Dutch TikTok audiences with comedy-focused entertainment."
+    },
+    "alib,nederlands,vroeger": {
+      "name": "Dutch Nostalgia and Archive Enthusiasts",
+      "description": "Dutch creators sharing nostalgic content, historical archives, and cultural memories from the Netherlands' past."
+    },
+    "stitch,tip,top10": {
+      "name": "Dutch TikTok Tips and Tricks Creators",
+      "description": "Dutch creators sharing practical tips, top 10 lists, and stitched content with their audience."
+    },
+    "belgie,nederland,tiktok": {
+      "name": "Dutch TikTok Lifestyle and Trends",
+      "description": "Netherlands-based creators sharing lifestyle content, challenges, and tips through stitches and trending formats."
+    },
+    "challenge,stitch,tip": {
+      "name": "Dutch Makeup and Beauty Creators",
+      "description": "Content creators sharing makeup tips, beauty challenges, and tutorials through interactive stitch and challenge formats."
+    },
+    "fy,meme,nl": {
+      "name": "Dutch Meme and Culture Commentary",
+      "description": "Dutch TikTokers creating humorous content about local culture, news, and everyday life with meme-based commentary."
+    },
+    "fyppppppppppppppppppppppp,missmontreal,viralvideo": {
+      "name": "Viral Content Creators and Amplifiers",
+      "description": "Dutch TikTokers focused on creating and sharing viral content through strategic hashtag use and trending audio."
+    },
+    "ncs,song,songs": {
+      "name": "NCS Music and Content Creators",
+      "description": "Dutch TikTokers sharing royalty-free NCS music content, creating viral videos and music-focused posts."
+    },
+    "trending,viralvideo,voorjou": {
+      "name": "Dutch Viral Content Creators",
+      "description": "Dutch TikTokers creating trending viral content, including educators and lifestyle creators focused on Dutch audience engagement."
+    },
+    "juf,onderwijs,viralvideo": {
+      "name": "Dutch Education Content Creators",
+      "description": "Teachers and educators sharing viral educational content and classroom moments on TikTok, primarily targeting Dutch audiences."
+    },
+    "amsterdam,nederland,netherlands": {
+      "name": "Dutch TikTok Mainstream Creators",
+      "description": "Popular Dutch content creators sharing lifestyle, humor, and cultural content primarily for Netherlands-based audiences."
+    },
+    "capcut,tiktoklive,work": {
+      "name": "Dutch Live Content Creators",
+      "description": "Dutch TikTok creators focused on live streaming and video editing, centered around content creation tools and community engagement."
+    },
+    "deventer,netherlands,news": {
+      "name": "Dutch Regional News and Commentary",
+      "description": "Dutch TikTok creators sharing news, commentary, and local perspectives from Netherlands, particularly Deventer region."
+    },
+    "music,ncs,song": {
+      "name": "NCS Electronic Music Enthusiasts",
+      "description": "Dutch TikTokers sharing and promoting electronic music, EDM, and NCS (No Copyright Sound) tracks."
+    },
+    "liverpool,realmadrid,vandijk": {
+      "name": "Dutch Football and Sports Enthusiasts",
+      "description": "Dutch TikTok creators united by passion for football, particularly Liverpool and Van Dijk fandom."
+    },
+    "dutch,fypシ,langlevedeliefde": {
+      "name": "Dutch Long-Term Relationship Advocates",
+      "description": "Dutch TikTokers sharing content about lasting love and relationships, unified by #langlevedeliefde community focus."
+    },
+    "foryou,fypage,langlevedeliefde": {
+      "name": "Dutch Long-term Relationship Content Creators",
+      "description": "Dutch TikTokers creating lifestyle and relationship content, united by focus on long-term love and romantic partnership themes."
+    },
+    "nl,techtok,wilder": {
+      "name": "Dutch Tech and Culture Creators",
+      "description": "Small cluster of Dutch TikTok creators sharing content on technology, lifestyle, and local culture with interconnected networks."
+    },
+    "football,liverpool,vandijk": {
+      "name": "Liverpool FC Dutch Fans",
+      "description": "Dutch TikTok users united by their passion for Liverpool Football Club and player Virgil van Dijk"
+    },
+    "fyppppppppppppppppppppppp,fypシ゚viral,gtag": {
+      "name": "Viral Growth Seekers and Edit Creators",
+      "description": "Dutch TikTokers focused on viral content creation, editing techniques, and trend participation through strategic hashtag use."
+    },
+    "gtag,trend,vr": {
+      "name": "Virtual Reality Creative Trendsetters",
+      "description": "Dutch content creators sharing VR experiences and trending digital art through edited videos and creative storytelling."
+    },
+    "foryou,foryoupage,fypシ": {
+      "name": "Dutch FYP Algorithm Optimizers",
+      "description": "Content creators focused on maximizing reach through algorithmic visibility and trending Dutch TikTok formats."
+    },
+    "blowthisup,stemsoftiktok,xyzbca": {
+      "name": "Dutch STEM Content Creators Network",
+      "description": "Dutch TikTok creators sharing science and educational content with emphasis on viral engagement and STEM topics."
+    },
+    "afaslive,missmontreal,suzanenfreek": {
+      "name": "Dutch Entertainment and Comedy Circle",
+      "description": "Dutch TikTok creators and personalities united around entertainment, comedy content, and pop culture references."
+    },
+    "anime,boxing🥊,sports": {
+      "name": "Combat Sports and Anime Enthusiasts",
+      "description": "Dutch TikTokers united by passion for boxing, combat sports, and anime content with crossover interests in sports culture."
+    },
+    "ajax,football,psv": {
+      "name": "Dutch Football Content Creators",
+      "description": "TikTok creators focused on Dutch football culture, primarily Ajax and PSV, blending sports content with humor and entertainment."
+    },
+    "football,pov,tiktoknl": {
+      "name": "Dutch Football POV Content Creators",
+      "description": "Dutch TikTok creators making point-of-view football content for the local audience."
+    },
+    "baby,meme,rotterdam": {
+      "name": "Rotterdam Meme and Humor Scene",
+      "description": "Dutch TikTokers creating meme content and humor clips centered around Rotterdam culture and everyday life."
+    },
+    "iphone,nederland,rotterdam": {
+      "name": "Dutch Urban TikTok Creators",
+      "description": "Netherlands-based TikTok creators sharing content about Dutch urban life, Rotterdam culture, and lifestyle via mobile platforms."
+    },
+    "brainrot,luxy,politie": {
+      "name": "Dutch Clip Commentary and Lifestyle",
+      "description": "Content creators sharing viral clips and lifestyle content with humorous commentary for Dutch TikTok audiences."
+    },
+    "humor,motivation,womeninstem": {
+      "name": "Dutch STEM Humor and Motivation Creators",
+      "description": "Dutch content creators blending science, humor, and motivational messaging with focus on women in STEM fields."
+    },
+    "humor,nederlands,vakantie": {
+      "name": "Dutch Comedy and Lifestyle Circle",
+      "description": "Connected Dutch TikTok creators sharing humor and vacation content with strong community engagement."
+    },
+    "nostalgia,school,travelvlog": {
+      "name": "Dutch Gen-Z Nostalgic Content Creators",
+      "description": "Young Dutch TikTokers blending school memories, nostalgic themes, and relatable humor with travel and creative content."
+    },
+    "drake,greenscreen,iceman": {
+      "name": "Dutch Rap and Hip-Hop Content Creators",
+      "description": "Dutch TikTokers creating hip-hop influenced content, sharing rap references and urban music culture with greenscreen effects."
+    },
+    "foryou,herkenbaar,wlw": {
+      "name": "Dutch WLW Relatable Content Creators",
+      "description": "Women-loving-women creators sharing relatable humor and personal content within the Dutch TikTok community."
+    },
+    "161,BookTok,trend": {
+      "name": "Dutch Trend and BookTok Creators",
+      "description": "Dutch TikTok creators united by trending content, book discussions, and viral culture participation with humor and social commentary."
+    },
+    "funny,nederlandsetiktok,politiek": {
+      "name": "Dutch Political Comedy Commentators",
+      "description": "Dutch TikTokers creating humorous political and cultural commentary for the Netherlands audience."
+    },
+    "boxing,boxing🥊,wilder": {
+      "name": "Dutch Boxing and UFC Enthusiasts",
+      "description": "Dutch TikTok users passionate about boxing and combat sports, sharing content about fighters like Wilder and UFC."
+    },
+    "anapaularenault,bbb,bigbrotherbrasil": {
+      "name": "Big Brother Brasil Fan Community",
+      "description": "Dutch TikTok users engaged with Brazilian reality TV show Big Brother Brasil content and related discussions."
+    },
+    "criadordeconteudo,jordanamorais,redebbb": {
+      "name": "Brazilian Content Creator Network",
+      "description": "Brazilian TikTok creators and influencers connected through content creation networks and reality TV culture."
+    },
+    "deolanebezerra,virginia,virginiafonceca": {
+      "name": "Virginia Fonceca Brazilian Entertainment Commentary",
+      "description": "Dutch TikTok accounts focused on Brazilian celebrity news and commentary, centered on Virginia Fonceca and related entertainment figures."
+    },
+    "arnhem,bnnvara,corona": {
+      "name": "Dutch News and Current Affairs Creators",
+      "description": "Content creators focused on news, social issues, and current events across Dutch regions, including pandemic coverage and activism."
+    },
+    "islam,moslims,ondernemen": {
+      "name": "Dutch Muslim Entrepreneurs and Voices",
+      "description": "Muslim creators discussing faith, business, and social issues within Dutch society and beyond."
+    },
+    "Ramadan,geloof,samenleving": {
+      "name": "Dutch Faith and Society Advocates",
+      "description": "Dutch TikTokers exploring intersection of faith, culture, and social issues through religious and community perspectives."
+    },
+    "cultuur,geloof,samenleving": {
+      "name": "Dutch Christian Political Commentary",
+      "description": "Creators discussing politics, faith, and culture from Christian perspectives on Dutch social issues."
+    },
+    "amerika,educatie,suriname": {
+      "name": "Dutch-Caribbean Education and Culture Creators",
+      "description": "Content creators exploring Dutch, American, and Surinamese perspectives through educational and cultural storytelling on TikTok."
+    },
+    "defensie,klm,schiphol": {
+      "name": "Dutch Aviation and Defense Enthusiasts",
+      "description": "Dutch TikTokers focused on Schiphol airport, KLM airline, and defense topics with news-oriented content."
+    },
+    "belasting,emigratie,energie": {
+      "name": "Dutch Tax and Emigration Critics",
+      "description": "Dutch TikTokers critiquing taxation, energy policy, and discussing emigration as alternatives to Netherlands living."
+    },
+    "brabant,leiden,overlast": {
+      "name": "Dutch Regional News and Civic Engagement",
+      "description": "News organizations and civic-minded accounts covering regional Dutch issues, particularly Leiden and Brabant local affairs."
+    },
+    "112nieuws,brand,d66": {
+      "name": "Dutch Regional News Broadcasters",
+      "description": "Regional public broadcasting accounts covering news, current events, and local Dutch community updates across provinces."
+    },
+    "arnhem,bevrijdingsdag,nieuws": {
+      "name": "Dutch Regional News and Culture",
+      "description": "Regional news broadcasters and outlets covering Dutch current events, cultural moments, and local journalism across provinces."
+    },
+    "fans,fietsen,regen": {
+      "name": "Dutch News and Weather Enthusiasts",
+      "description": "News outlets and followers sharing Dutch current events, weather updates, and cycling culture content."
+    },
+    "nederland,regen,trein": {
+      "name": "Dutch News and Current Affairs",
+      "description": "Dutch news outlets and journalists sharing current events, weather, and daily life content with Dutch audiences."
+    },
+    "eva,radar,vacature": {
+      "name": "Dutch Public Media and News Networks",
+      "description": "Major Dutch public broadcasting organizations and media outlets sharing news, culture, and current affairs content on TikTok."
+    },
+    "alib,corona,pandemie": {
+      "name": "Dutch News and Current Affairs Creators",
+      "description": "Dutch journalists and news creators covering politics, pandemic, and current events through TikTok"
+    },
+    "nationaalprotest,nederlandinopstand,samensterk": {
+      "name": "Dutch National Protest Movement",
+      "description": "Activists organizing collective resistance and nationwide protests against government policies, united through solidarity messaging."
+    },
+    "dutchtiktok,groenlinkspvda,samenvooruit": {
+      "name": "Dutch Progressive Politics and Activism",
+      "description": "Left-leaning Dutch TikTokers focused on political engagement, social justice, and activism around progressive causes."
+    },
+    "Ramadan,gaza,palestina": {
+      "name": "Dutch Palestinian Solidarity Activists",
+      "description": "Dutch TikTokers advocating for Palestinian causes and Gaza during Ramadan, mixing activism with local politics."
+    },
+    "actie,health,trump": {
+      "name": "Dutch Political Action and Wellness Advocates",
+      "description": "Dutch TikTokers combining political commentary on Trump with health activism and organized social action content."
+    },
+    "gemeente,leefbaarrotterdam,ov": {
+      "name": "Rotterdam Civic Engagement Activists",
+      "description": "Dutch TikTokers focused on Rotterdam livability, municipal governance, and public transport advocacy through civic engagement content."
+    },
+    "groenlinkspvda,politieknederland,samenvooruit": {
+      "name": "Progressive Dutch Left Politics",
+      "description": "Left-leaning Dutch political advocates united around progressive causes and green-left coalition politics."
+    },
+    "denhaag,nederland,politiek": {
+      "name": "Dutch Progressive Political Activists",
+      "description": "Progressive Dutch political voices and activists focused on Netherlands politics, centered around The Hague."
+    },
+    "gr26,utrecht,❤️💚": {
+      "name": "Utrecht Progressive Politics Advocates",
+      "description": "Dutch progressive political activists centered in Utrecht sharing left-wing political content and advocacy through social media."
+    },
+    "dilanyesilgoz,robjetten,wicked": {
+      "name": "Dutch Liberal Politics and Entertainment",
+      "description": "Dutch TikTokers centered on VVD politics, featuring Rob Jetten and Dilan Yeşilgöz, blending political content with entertainment."
+    },
+    "amsterdam,fy,fyp": {
+      "name": "Amsterdam Dutch TikTok Content Creators",
+      "description": "Dutch TikTok creators producing viral content across entertainment, news, and cultural commentary for broad audiences."
+    },
+    "dagelijksedab,harrystyles,moerdijk": {
+      "name": "Moerdijk Local Content Creators",
+      "description": "Dutch TikTokers from Moerdijk sharing daily lifestyle content and pop culture humor with local community focus."
+    },
+    "dilanyesilgoz,teamvvd,vvd": {
+      "name": "VVD Dutch Political Supporters",
+      "description": "Dutch TikTok users united by support for VVD party and Dilan Yesilgöz's political messaging and campaigns."
+    },
+    "2026,demonstratie,leegstand": {
+      "name": "Dutch Housing Crisis Activists",
+      "description": "Dutch political activists advocating for housing solutions and demonstrations, focused on vacant building issues heading toward 2026."
+    },
+    "cda,politiek,vvd": {
+      "name": "Dutch Center-Right Political Commentators",
+      "description": "TikTok creators focused on Dutch politics, primarily covering VVD, CDA, and PvdA perspectives and commentary."
+    },
+    "cda,pvda,vvd": {
+      "name": "Dutch Political Commentary Creators",
+      "description": "Dutch TikTokers creating content about mainstream Dutch politics, spanning left to center-right parties."
+    },
+    "forumvoordemocratie,fvd,thierrybaudet": {
+      "name": "Forum voor Democratie supporters",
+      "description": "Dutch TikTok users united by support for Forum voor Democratie party and Thierry Baudet's political movement."
+    },
+    "belasting,opdezedag,tv": {
+      "name": "Dutch Right-Wing Political Commentators",
+      "description": "Conservative Dutch politicians and news commentators focused on elections, taxation, and current affairs criticism."
+    },
+    "denhaag,holland,rechts": {
+      "name": "Dutch Right-Wing The Hague Network",
+      "description": "Right-leaning Dutch TikTokers centered in The Hague sharing political commentary and cultural content."
+    },
+    "gr2026,stemmen,verkiezingen": {
+      "name": "Forum for Democracy Dutch Election Network",
+      "description": "FVD supporters and politicians mobilizing around Dutch 2026 elections and voting advocacy on TikTok."
+    },
+    "bbb,timmermans,trump": {
+      "name": "Dutch Right-Wing Political Commentary",
+      "description": "TikTok creators focused on Dutch conservative politics, Trump support, and commentary on figures like Timmermans."
+    },
+    "loosdrecht,powned,vandaaginside": {
+      "name": "Loosdrecht Local News and Politics",
+      "description": "Dutch TikTokers sharing local news, political commentary, and cultural content centered on Loosdrecht and broader Dutch issues."
+    },
+    "hansjanmaat,stemrechts,trots": {
+      "name": "Dutch Right-Wing Political Activists",
+      "description": "Dutch TikTok users advocating for right-wing politics and nationalist pride through political content and activism."
+    },
+    "pimfortuyn,politiek,thierrybaudet": {
+      "name": "Dutch Right-Wing Political Commentators",
+      "description": "Content creators focused on right-wing Dutch politics, featuring commentary aligned with figures like Thierry Baudet and Pim Fortuyn."
+    },
+    "belgique,bruxelles,vlaanderen": {
+      "name": "Flemish and Belgian Political Right",
+      "description": "Right-wing political activists and influencers from Flanders and Belgium sharing nationalist and conservative content."
+    },
+    "bekeerling,dawah,umrah": {
+      "name": "Dutch Islamic Content and Politics Mix",
+      "description": "Dutch creators blending Islamic content, political commentary, and entertainment across dawah, conversion, and cultural topics."
+    },
+    "azc,d66,marcoborsato": {
+      "name": "Dutch Right-Wing Political Activists",
+      "description": "Conservative Dutch TikTokers focused on politics, immigration discourse, and nationalist messaging with shared ideological alignment."
+    },
+    "dealwithit,footballisland,videoland": {
+      "name": "Dutch Entertainment and Current Affairs Creators",
+      "description": "Content creators blending humor, news commentary, and entertainment across Dutch cultural and political topics."
+    },
+    "11juli,linkinbio,vlaamsbelang": {
+      "name": "Vlaams Belang Political Activists",
+      "description": "Dutch TikTok creators promoting Vlaams Belang political messaging and ideology through coordinated content."
+    },
+    "ad,stitch,techtok": {
+      "name": "Dutch TikTok Mainstream Creators",
+      "description": "Diverse Dutch creators spanning tech, politics, culture, and lifestyle content with broad mainstream appeal and engagement."
+    },
+    "amsterdam,dutchtiktok,europe": {
+      "name": "Amsterdam-Based European Content Creators",
+      "description": "Dutch TikTokers based in Amsterdam creating lifestyle and travel content for European audiences."
+    },
+    "diaspora,france,italy": {
+      "name": "European Diaspora Community Network",
+      "description": "Dutch-based creators with Italian and French heritage sharing diaspora culture and cross-European connections."
+    },
+    "amsterdam,france,usa": {
+      "name": "Dutch Travel and Lifestyle Creators",
+      "description": "Content creators sharing travel experiences and lifestyle content across Amsterdam, France, and USA destinations."
+    },
+    "amsterdamguide,armenia,dutchlife": {
+      "name": "Dutch-Armenian Cultural Bridge Creators",
+      "description": "Dutch TikTokers exploring Amsterdam lifestyle while maintaining connections to Armenian culture and heritage."
+    },
+    "homelab,networking,techtok": {
+      "name": "Dutch Tech Enthusiasts and Networkers",
+      "description": "Young professionals exploring technology, AI, and entrepreneurship through educational content and community building."
+    },
+    "curiosity,read,stem": {
+      "name": "Dutch Educational Content Creators",
+      "description": "TikTok creators focused on science, learning, and intellectual curiosity for Dutch audiences."
+    },
+    "ai,entrepreneurship,jobsearch": {
+      "name": "Dutch AI and Career Education Advocates",
+      "description": "Content creators promoting AI literacy, job search skills, and entrepreneurial mindset to Dutch audiences."
+    },
+    "cute,dance,relatable": {
+      "name": "Dutch Relatable Comedy Dancers",
+      "description": "Young Dutch creators sharing humorous, relatable dance content with emphasis on authenticity and casual fun."
+    },
+    "Minecraft,cute,fypシ": {
+      "name": "Dutch Gaming and Lifestyle Creators",
+      "description": "Young Dutch TikTokers creating cute, relatable gaming and lifestyle content centered around Minecraft and trending formats."
+    },
+    "islamicreminder,muslimtiktok,quran": {
+      "name": "Dutch Islamic Reminder Content Creators",
+      "description": "Dutch TikTok creators sharing Quranic content and Islamic reminders with their Muslim audience."
+    },
+    "netanyahu,rescue,theconversation": {
+      "name": "International News and Politics Commentators",
+      "description": "News-focused creators sharing international political commentary and coverage, particularly on Middle Eastern affairs and global events."
+    },
+    "geschiedenis,nederland,voorjou": {
+      "name": "Dutch Cultural and News Commentators",
+      "description": "Dutch TikTokers sharing history, current events, and cultural commentary with mainstream appeal and viral potential."
+    },
+    "netherland,utrecht,viral": {
+      "name": "Utrecht Viral Content Creators",
+      "description": "Dutch TikTok creators from Utrecht focused on viral entertainment content spanning humor, culture, and local trends."
+    },
+    "nieuws,opdezedag,trending": {
+      "name": "Dutch News and Trending Commentary",
+      "description": "Dutch TikTokers sharing news, trending topics, and current events with commentary and cultural humor."
+    },
+    "nieuws,trending,voorjou": {
+      "name": "Dutch Trending News and Commentary",
+      "description": "Dutch TikTok creators sharing news, current events, and cultural commentary through trending formats and humor."
+    },
+    "fvd,nostalgie,voorjoupagina": {
+      "name": "Dutch Nationalist Nostalgia Community",
+      "description": "Dutch accounts sharing nationalist sentiment, cultural nostalgia, and political commentary centered on Dutch identity and heritage."
+    },
+    "dutch,netherlands,politiek": {
+      "name": "Dutch Political and Cultural Commentary",
+      "description": "Dutch TikTok creators sharing political discourse, national culture, and commentary on Netherlands affairs."
+    },
+    "liverpool,vandijk,virgilvandijk": {
+      "name": "Virgil van Dijk Football Fans",
+      "description": "Dutch TikTok fans united by their support for Virgil van Dijk and Liverpool Football Club content."
+    },
+    "fcbarcelona,goal,oranje": {
+      "name": "Dutch Football and Sports Fans",
+      "description": "Dutch TikTokers sharing football content, goal clips, and sports edits centered on PSV, Barcelona, and Oranje."
+    },
+    "edit,fcbarcelona,goal": {
+      "name": "Dutch Football Clip Editors",
+      "description": "Dutch TikTokers creating and sharing edited football highlight clips, centered on FC Barcelona and Dutch clubs."
+    },
+    "salah,virgilvandijk,vvd": {
+      "name": "Liverpool Football Club Dutch Fans",
+      "description": "Dutch TikTokers united by passion for Liverpool FC, particularly Virgil van Dijk and Mohamed Salah"
+    },
+    "afd,nachrichten,politik": {
+      "name": "German News and Politics Watchers",
+      "description": "Dutch TikTok users following German news outlets and political content, particularly focused on German politics and current events."
+    },
+    "nachrichten,unfall,usa": {
+      "name": "German News and Breaking News Outlets",
+      "description": "German-language news organizations sharing breaking news, accidents, and current events with Dutch TikTok audiences."
+    },
+    "eurovision2025,joostkleindroomgroot,joostkleineurovision2024": {
+      "name": "Joost Klein Eurovision Supporters",
+      "description": "Dutch TikTok users supporting Joost Klein's Eurovision 2025 participation and celebrating his music career."
+    },
+    "viral_video,❤️😍😘🥰foryou🥺🥺,🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣": {
+      "name": "Dutch Politics Viral Content Creators",
+      "description": "Small group sharing political clips and viral humor content on Dutch TikTok with engagement-focused posting strategies."
+    },
+    "ajax,wkvoetbal,wkvoetbal2026": {
+      "name": "Dutch Football and Sports Commentary",
+      "description": "Dutch sports commentators and media personalities covering football, World Cup, and Ajax with entertainment-focused reporting."
+    },
+    "capcut,onsoranje,opdezedag": {
+      "name": "Dutch Entertainment and Sports Commentary",
+      "description": "Dutch TikTok creators and media accounts sharing entertainment, sports, and cultural commentary content."
+    },
+    "bachelorette,rippers,rtlboulevard": {
+      "name": "RTL Boulevard Entertainment Circle",
+      "description": "Dutch entertainment and pop culture enthusiasts centered around RTL Boulevard content and reality TV discussions."
+    },
+    "ajax,feyenoord,wkvoetbal": {
+      "name": "Dutch Football News and Commentary",
+      "description": "Sports journalists and commentators covering Dutch football, including Eredivisie clubs and national team coverage."
+    },
+    "nederlandselftal,wkvoetbal,worldcup": {
+      "name": "Dutch Football World Cup Enthusiasts",
+      "description": "Dutch TikTok users passionate about the national football team and World Cup coverage, sharing match reactions and sports commentary."
+    },
+    "curacaotiktok,pathe,wk2026": {
+      "name": "Curaçao Dutch Football Enthusiasts",
+      "description": "Dutch TikTokers from Curaçao sharing sports content, particularly focused on football and World Cup 2026 coverage."
+    },
+    "marokko,oranje,pathe": {
+      "name": "Dutch-Moroccan Sports and Culture",
+      "description": "Dutch and Moroccan creators blending sports commentary, cultural pride, and entertainment content for diaspora audiences."
+    },
+    "beauty,vrouwen,weekend": {
+      "name": "Dutch Beauty and Lifestyle Creators",
+      "description": "Female-focused content creators sharing beauty, lifestyle, and weekend experiences with Dutch audiences."
+    },
+    "buggenhout,ongeval,verkeer": {
+      "name": "Dutch News and Traffic Incident Reporters",
+      "description": "News outlets and content creators sharing traffic accidents and local incidents from Buggenhout and surrounding areas."
+    },
+    "date,langlevedeliefde,lldl": {
+      "name": "Lang Leve de Liefde Dating Community",
+      "description": "Dutch TikTok users engaged with the Lang Leve de Liefde dating show and romance-focused content from SBS6."
+    }
+  }
+}

@@ -1,0 +1,39 @@
+# ── Secrets ───────────────────────────────────────────────────────────────
+.env
+.en
+*.key
+
+# ── Seed accounts (real handles kept out of the repo for privacy) ──────────
+seed_accounts.txt
+
+# ── Raw / account-level data (PII; large; regeneratable) ──────────────────
+*.db
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/graph.json
+data/sounds.json
+data/hashtags.json
+data/axis_history.json
+data/strategy.json
+data/sound_graph.json
+data/*.xlsx
+data/~$*.xlsx
+data/session_log*.txt
+bubbletree/bubbletree_data.json
+
+# ── Unredacted local working copies of the docs (published versions live in docs/) ──
+/PROJECT_STATE.md
+/DESIGN_PRINCIPLES.md
+/RESEARCH_NOTES.md
+/VISUALIZATION_STATE.md
+
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── OS / editor cruft ─────────────────────────────────────────────────────
+.DS_Store
+.Rhistory
+*.bak

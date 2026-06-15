@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubblescape v4</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --dim: #666;
+    --dimmer: #444;
+    --accent-x: #7ec8e3;
+    --accent-y: #e3a87e;
+    --r: 8px;
+    --mono: 'SF Mono', 'Fira Mono', monospace;
+    --sidebar: 260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px; height: 100vh;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── topbar ── */
+  #topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; height: 48px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  #topbar h1 {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--dimmer); white-space: nowrap;
+  }
+  #breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--dim);
+  }
+  #breadcrumb span.active { color: var(--text); font-weight: 600; }
+  #breadcrumb .sep { color: var(--dimmer); }
+
+  #axis-pills { display: flex; gap: 8px; margin-left: auto; }
+  .axis-pill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border: 1px solid var(--border);
+    border-radius: 20px; font-size: 11px;
+    font-family: var(--mono); white-space: nowrap;
+  }
+  .axis-pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .axis-pill.x .dot { background: var(--accent-x); }
+  .axis-pill.y .dot { background: var(--accent-y); }
+
+  #back-btn {
+    padding: 4px 12px; border: 1px solid var(--border);
+    border-radius: var(--r); background: var(--surface2);
+    color: var(--dim); cursor: pointer; font-size: 12px;
+    display: none;
+  }
+  #back-btn:hover { color: var(--text); border-color: #444; }
+  #back-btn.visible { display: block; }
+
+  /* ── main ── */
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  #canvas-wrap { flex: 1; min-width: 0; position: relative; overflow: hidden; }
+  svg#plot { width: 100%; height: 100%; display: block; }
+
+  /* ── sidebar ── */
+  #sidebar {
+    width: var(--sidebar); flex-shrink: 0;
+    background: var(--surface); border-left: 1px solid var(--border);
+    overflow-y: auto; display: flex; flex-direction: column;
+  }
+  #sidebar-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  #sidebar-header h2 {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--dimmer);
+  }
+  #sidebar-title {
+    font-size: 13px; font-weight: 600; margin-top: 4px; line-height: 1.4;
+  }
+  #sidebar-meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+  .sb-section {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .sb-section h3 {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--dimmer); margin-bottom: 10px;
+  }
+
+  /* axis explanation */
+  .axis-block { margin-bottom: 12px; }
+  .axis-block-label {
+    font-size: 11px; font-weight: 600; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .axis-block-label .swatch {
+    width: 10px; height: 3px; border-radius: 2px;
+  }
+  .axis-poles {
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .axis-pole {
+    font-size: 10px; font-family: var(--mono); color: var(--dim);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .axis-pole .arrow { color: var(--dimmer); }
+  .tag-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 5px;
+    font-size: 10px; font-family: var(--mono); color: var(--dim);
+  }
+  .eta-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; }
+  .eta-fill { height: 100%; border-radius: 2px; }
+
+  /* cluster filter chips */
+  #filter-chips { display: flex; flex-direction: column; gap: 6px; }
+  .filter-chip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px; border-radius: 6px;
+    cursor: pointer; transition: opacity .15s;
+    border: 1px solid transparent;
+  }
+  .filter-chip:hover { border-color: var(--border); }
+  .filter-chip.hidden { opacity: .35; }
+  .filter-chip .chip-dot {
+    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  }
+  .filter-chip .chip-name { font-size: 11px; flex: 1; line-height: 1.3; }
+  .filter-chip .chip-n { font-size: 10px; color: var(--dimmer); font-family: var(--mono); }
+
+  /* note box */
+  .note-box {
+    margin: 12px 16px; padding: 9px 11px;
+    background: #141008; border: 1px solid #2a2010;
+    border-radius: var(--r); font-size: 10px; color: #a08050;
+    line-height: 1.5;
+  }
+
+  /* ── tooltip ── */
+  #tooltip {
+    position: absolute; background: #1a1a1a; border: 1px solid #333;
+    border-radius: 10px; padding: 12px 14px; pointer-events: none;
+    opacity: 0; transition: opacity .1s; max-width: 260px;
+    z-index: 100; box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  }
+  #tooltip.visible { opacity: 1; }
+  .tt-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .tt-meta { font-size: 11px; color: var(--dim); margin-bottom: 8px; }
+  .tt-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 8px; }
+  .tt-tag {
+    background: #252525; border: 1px solid #333;
+    border-radius: 3px; padding: 1px 5px;
+    font-size: 10px; font-family: var(--mono); color: var(--dim);
+  }
+  .tt-hint { font-size: 11px; color: #888; font-style: italic; }
+
+  /* ── loading ── */
+  #loading {
+    position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center;
+    background: var(--bg); z-index: 200; flex-direction: column; gap: 12px;
+  }
+  #loading.hidden { display: none; }
+  .spinner {
+    width: 32px; height: 32px; border: 2px solid var(--border);
+    border-top-color: #666; border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>Bubblescape</h1>
+  <div id="breadcrumb">
+    <span class="active" id="bc-root">Nederlands TikTok</span>
+  </div>
+  <button id="back-btn" onclick="collapseToMacro()">← Terug</button>
+  <div id="axis-pills">
+    <div class="axis-pill x"><div class="dot"></div><span id="x-label">—</span></div>
+    <div class="axis-pill y"><div class="dot"></div><span id="y-label">—</span></div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="canvas-wrap">
+    <svg id="plot"></svg>
+    <div id="tooltip"></div>
+    <div id="loading"><div class="spinner"></div><p>Data laden…</p></div>
+  </div>
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h2>In beeld</h2>
+      <div id="sidebar-title">Nederlands TikTok</div>
+      <div id="sidebar-meta">—</div>
+    </div>
+    <div class="sb-section" id="sb-axes">
+      <h3>Actieve assen</h3>
+      <div id="axes-content"></div>
+    </div>
+    <div class="sb-section" id="sb-filters">
+      <h3>Clusters</h3>
+      <div id="filter-chips"></div>
+    </div>
+    <div class="note-box" id="sb-note">
+      Posities zijn berekend op TF-IDF hashtag-vectoren. De assen tonen de dimensies die clusters op dit niveau het meest van elkaar onderscheiden.
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data loading ──────────────────────────────────────────────────────────────
+
+let BT = null;      // bubbletree_data.json
+let PCA = null;     // pca_axes.json
+
+async function loadData() {
+  try {
+    const [bt, pca] = await Promise.all([
+      fetch('/bubbletree/bubbletree_data.json').then(r => r.json()),
+      fetch('/data/pca_axes.json').then(r => r.json()),
+    ]);
+    BT = bt;
+    PCA = pca;
+    document.getElementById('loading').classList.add('hidden');
+    init();
+  } catch (e) {
+    document.querySelector('#loading p').textContent = 'Fout bij laden: ' + e.message;
+  }
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+const state = {
+  path: [],          // navigation stack: [] = macro, ['1'] = inside cluster 1, ['1','1b'] = deeper
+  hidden: new Set(), // cluster IDs filtered out
+  positions: {},     // cid → { x, y }  (animated positions, persisted across renders)
+};
+
+function currentParentId() { return state.path[state.path.length - 1] || null; }
+function isAtMacro() { return state.path.length === 0; }
+
+// ── Axis helpers ──────────────────────────────────────────────────────────────
+
+function globalBestAxes() {
+  const eta = PCA.cluster_separation_eta2 || {};
+  const sorted = Object.entries(eta).sort((a, b) => b[1] - a[1]);
+  return {
+    x: sorted[0]?.[0] || 'PC1',
+    y: sorted[1]?.[0] || 'PC2',
+  };
+}
+
+function localBestAxes(clusterId) {
+  const lp = PCA.local_pca?.[clusterId];
+  if (!lp) return null;
+  return { x: lp.best_x, y: lp.best_y, lp };
+}
+
+function pcScore(clusterId, pcKey) {
+  return PCA.cluster_pc_scores?.[clusterId]?.[pcKey] ?? 0.5;
+}
+
+function localPcScore(clusterId, subId, pcKey) {
+  const lp = PCA.local_pca?.[clusterId];
+  if (!lp) return 0.5;
+  const norm = lp.sub_positions?.[subId]?.[pcKey + '_norm'];
+  return norm ?? 0.5;
+}
+
+// Return { name, hi, lo, rationale } for a PC key.
+// Priority: pc_names (Claude-named) > local PCA label hints > fallback "—"
+// Never returns raw hashtags as display text.
+function axisInfo(pcKey, localClusterId = null) {
+  // 1. Named via Claude API (name_axes.py)
+  const named = PCA.pc_names?.[pcKey];
+  if (named) {
+    return {
+      name:      named.name,
+      hi:        named.high_label || '—',
+      lo:        named.low_label  || '—',
+      rationale: named.rationale  || '',
+    };
+  }
+  // 2. Hand-crafted axis names (from correlations — use the strongest match as hint)
+  const HAND_NAMES = {
+    political_lr:          'Links–Rechts spectrum',
+    institutional_trust:   'Institutioneel vertrouwen',
+    religious_identity:    'Religieuze identiteit',
+    cultural_vs_political: 'Cultureel vs. politiek',
+    bubble_closure:        'Bubbel-geslotenheid',
+    reach:                 'Bereik',
+  };
+  const corrs = PCA.correlations_with_handcrafted?.[pcKey];
+  if (corrs) {
+    const best = Object.entries(corrs)
+      .map(([ax, v]) => [ax, Math.abs(v.r || 0)])
+      .sort((a, b) => b[1] - a[1])[0];
+    if (best && best[1] >= 0.65) {
+      const hname = HAND_NAMES[best[0]] || best[0];
+      // Use hand-crafted hi/lo labels based on axis direction
+      const r = corrs[best[0]].r;
+      const POLES = {
+        political_lr:          { hi: 'Rechts',            lo: 'Links' },
+        institutional_trust:   { hi: 'Hoog vertrouwen',   lo: 'Laag vertrouwen' },
+        religious_identity:    { hi: 'Religieus',         lo: 'Seculier' },
+        cultural_vs_political: { hi: 'Cultureel',         lo: 'Politiek' },
+        bubble_closure:        { hi: 'Gesloten bubbel',   lo: 'Open netwerk' },
+        reach:                 { hi: 'Groot bereik',      lo: 'Klein bereik' },
+      };
+      const poles = POLES[best[0]] || { hi: '—', lo: '—' };
+      return {
+        name:      hname,
+        hi:        r > 0 ? poles.hi : poles.lo,
+        lo:        r > 0 ? poles.lo : poles.hi,
+        rationale: '',
+      };
+    }
+  }
+  // 3. Not yet named — show placeholder, never raw hashtags
+  return { name: pcKey + ' (nog niet benoemd)', hi: '—', lo: '—', rationale: '' };
+}
+
+// Backwards-compat shim used in render() for plot pole labels
+function poleLabels(pcKey, localClusterId = null) {
+  const info = axisInfo(pcKey, localClusterId);
+  return { lo: info.lo, hi: info.hi };
+}
+
+function eta2Value(pcKey, localClusterId = null) {
+  if (localClusterId) {
+    return PCA.local_pca?.[localClusterId]?.eta2?.[pcKey] ?? 0;
+  }
+  return PCA.cluster_separation_eta2?.[pcKey] ?? 0;
+}
+
+// ── Geometry ──────────────────────────────────────────────────────────────────
+
+function plotDims() {
+  const svg = document.getElementById('plot');
+  const r = svg.getBoundingClientRect();
+  const pad = { top: 44, right: 44, bottom: 56, left: 64 };
+  return { W: r.width, H: r.height, pad };
+}
+
+function toSvg(normX, normY, W, H, pad) {
+  return {
+    x: pad.left + normX * (W - pad.left - pad.right),
+    y: (H - pad.bottom) + normY * (pad.top - (H - pad.bottom)),
+  };
+}
+
+function clusterColor(c) {
+  return c.color || '#888';
+}
+
+function circleR(c, isSub) {
+  const { W } = plotDims();
+  const scale = Math.max(0.5, Math.min(1, (W - 80) / 600));
+  if (isSub) return Math.min(32, Math.max(8, Math.sqrt(c.size || 4) * 3) * scale);
+  return Math.min(58, Math.max(16, Math.sqrt(c.size || 10) * 4.5) * scale);
+}
+
+// ── Cluster lookup ────────────────────────────────────────────────────────────
+
+function getMacroClusters() {
+  return (BT.clusters || []);
+}
+
+// Recursively find a cluster node by id at any depth
+function findCluster(id) {
+  function walk(node) {
+    if (node.id === id) return node;
+    for (const s of (node.subclusters || [])) {
+      const found = walk(s);
+      if (found) return found;
+    }
+    return null;
+  }
+  for (const m of getMacroClusters()) {
+    const found = walk(m);
+    if (found) return found;
+  }
+  return null;
+}
+
+// Get immediate sub-clusters of a node at any depth
+function getSubClusters(id) {
+  const node = findCluster(id);
+  return node?.subclusters || [];
+}
+
+// Get the macro cluster that owns a given id
+function getMacroClusterOf(id) {
+  for (const m of getMacroClusters()) {
+    function walk(node) {
+      if (node.id === id) return true;
+      return (node.subclusters || []).some(s => walk(s));
+    }
+    if (walk(m)) return m;
+  }
+  return null;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function render() {
+  const svg = document.getElementById('plot');
+  const { W, H, pad } = plotDims();
+  if (W < 10) return;
+
+  const parentId = currentParentId();
+  const atMacro = isAtMacro();
+
+  // For local (drill-down) view, find the macro cluster that owns parentId
+  // so we can use its color as the accent
+  const activeMacro = atMacro ? null : getMacroClusterOf(parentId);
+  const axes = atMacro ? globalBestAxes() : (localBestAxes(parentId) || globalBestAxes());
+
+  updateAxisPills(axes, parentId);
+  updateSidebar(axes, parentId);
+
+  const xLo = pad.left, xHi = W - pad.right;
+  const yLo = H - pad.bottom, yHi = pad.top;
+
+  let html = '';
+
+  // Grid
+  for (let i = 0; i <= 4; i++) {
+    const xv = xLo + (i / 4) * (xHi - xLo);
+    const yv = yLo + (i / 4) * (yHi - yLo);
+    html += `<line x1="${xv}" y1="${yHi}" x2="${xv}" y2="${yLo}" stroke="#1e1e1e" stroke-dasharray="2 6"/>`;
+    html += `<line x1="${xLo}" y1="${yv}" x2="${xHi}" y2="${yv}" stroke="#1e1e1e" stroke-dasharray="2 6"/>`;
+  }
+  // Axis lines
+  html += `<line x1="${xLo}" y1="${yLo}" x2="${xHi}" y2="${yLo}" stroke="#2a2a2a"/>`;
+  html += `<line x1="${xLo}" y1="${yHi}" x2="${xLo}" y2="${yLo}" stroke="#2a2a2a"/>`;
+  // Axis labels — use named labels, never raw PC keys
+  const ix = axisInfo(axes.x, parentId);
+  const iy = axisInfo(axes.y, parentId);
+  html += `<text x="${(xLo+xHi)/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="#4a8fab" font-weight="600">${ix.name}</text>`;
+  html += `<text x="${-H/2}" y="14" text-anchor="middle" transform="rotate(-90)" font-size="11" fill="#a87040" font-weight="600">${iy.name}</text>`;
+  // Pole labels
+  html += `<text x="${xLo}" y="${yLo+18}" text-anchor="start" font-size="10" fill="#3a5a6a">← ${ix.lo}</text>`;
+  html += `<text x="${xHi}" y="${yLo+18}" text-anchor="end" font-size="10" fill="#3a5a6a">${ix.hi} →</text>`;
+  html += `<text x="${xLo-10}" y="${yHi+2}" text-anchor="middle" transform="rotate(-90,${xLo-10},${yHi+2})" font-size="10" fill="#6a4a20">${iy.hi} →</text>`;
+  html += `<text x="${xLo-10}" y="${yLo}" text-anchor="middle" transform="rotate(-90,${xLo-10},${yLo})" font-size="10" fill="#6a4a20">← ${iy.lo}</text>`;
+  // Tick labels
+  ['0','0.25','0.5','0.75','1'].forEach((l, i) => {
+    const xv = xLo + (i/4)*(xHi-xLo);
+    const yv = yLo + (i/4)*(yHi-yLo);
+    html += `<text x="${xv}" y="${yLo+32}" text-anchor="middle" font-size="10" fill="#333">${l}</text>`;
+    html += `<text x="${xLo-6}" y="${yv}" text-anchor="end" dominant-baseline="central" font-size="10" fill="#333">${l}</text>`;
+  });
+
+  if (atMacro) {
+    // ── Macro view ──
+    const macros = getMacroClusters();
+
+    // Recompute global positions from PCA scores
+    macros.forEach(c => {
+      const xv = pcScore(c.id, axes.x);
+      const yv = pcScore(c.id, axes.y);
+      state.positions[c.id] = toSvg(xv, yv, W, H, pad);
+    });
+
+    // Glow rings
+    macros.forEach(c => {
+      const pos = state.positions[c.id];
+      const r = circleR(c, false);
+      const dimmed = state.hidden.has(c.id);
+      html += `<circle cx="${pos.x}" cy="${pos.y}" r="${r+8}" fill="${c.color}" opacity="${dimmed ? 0.04 : 0.06}"/>`;
+      html += `<circle cx="${pos.x}" cy="${pos.y}" r="${r+2}" fill="none" stroke="${c.color}" stroke-width="1" opacity="${dimmed ? 0.08 : 0.2}"/>`;
+    });
+
+    // Circles + labels
+    macros.forEach(c => {
+      const pos = state.positions[c.id];
+      const r = circleR(c, false);
+      const dimmed = state.hidden.has(c.id);
+      html += `<circle class="node" data-id="${c.id}" cx="${pos.x}" cy="${pos.y}" r="${r}"
+        fill="${c.color}" fill-opacity="${dimmed ? 0.12 : 1}" stroke="rgba(0,0,0,.3)" stroke-width="2"
+        style="cursor:pointer"/>`;
+      if (!dimmed) {
+        const lines = wrapText(c.name, 16);
+        const lh = 14, th = lines.length * lh;
+        lines.forEach((line, i) => {
+          html += `<text x="${pos.x}" y="${pos.y + (-th/2 + i*lh + lh/2)}" text-anchor="middle"
+            dominant-baseline="central" font-size="12" font-weight="600"
+            fill="white" paint-order="stroke" stroke="rgba(0,0,0,.7)"
+            stroke-width="3" stroke-linejoin="round" data-id="${c.id}"
+            class="node" style="pointer-events:none">${line}</text>`;
+        });
+      }
+    });
+
+  } else {
+    // ── Drill-down view ──
+    // Shows: all macro clusters dimmed in background + children of parentId
+    const subs = getSubClusters(parentId);
+    const accentColor = activeMacro?.color || '#888';
+
+    // Dimmed macro clusters in background (at their global positions)
+    getMacroClusters().forEach(c => {
+      const pos = state.positions[c.id];
+      if (!pos) return;
+      const r = circleR(c, false) * 0.7;
+      const dimmed = state.hidden.has(c.id);
+      // The macro that contains the current parentId gets a ring treatment
+      const isActive = activeMacro && c.id === activeMacro.id;
+      if (isActive) {
+        html += `<circle cx="${pos.x}" cy="${pos.y}" r="${r}"
+          fill="none" stroke="${c.color}" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.3"/>`;
+      } else {
+        html += `<circle class="macro-bg" data-id="${c.id}" cx="${pos.x}" cy="${pos.y}" r="${r}"
+          fill="${c.color}" fill-opacity="${dimmed ? 0.04 : 0.15}" stroke="${c.color}" stroke-width="1.5"
+          stroke-opacity="${dimmed ? 0.05 : 0.2}" style="cursor:pointer"/>`;
+        if (!dimmed) {
+          html += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle"
+            dominant-baseline="central" font-size="10" fill="${c.color}" opacity="0.45"
+            class="macro-bg" data-id="${c.id}" style="pointer-events:none">${c.name?.split(' ')[0]}</text>`;
+        }
+      }
+    });
+
+    // Lines from parent position to each sub
+    const parentPos = state.positions[parentId] || { x: W/2, y: H/2 };
+    subs.forEach(s => {
+      const sp = state.positions[s.id];
+      if (!sp) return;
+      html += `<line x1="${parentPos.x}" y1="${parentPos.y}" x2="${sp.x}" y2="${sp.y}"
+        stroke="${accentColor}" stroke-dasharray="3 4" opacity="0.2"/>`;
+    });
+
+    // Sub-clusters
+    subs.forEach(s => {
+      if (!state.positions[s.id]) {
+        state.positions[s.id] = { ...parentPos };
+      }
+      const pos = state.positions[s.id];
+      const r = circleR(s, true);
+      const dimmed = state.hidden.has(s.id);
+      const hasSubs = (s.subclusters || []).length >= 2;
+
+      html += `<circle class="node sub-node" data-id="${s.id}" cx="${pos.x}" cy="${pos.y}" r="${r}"
+        fill="${accentColor}" fill-opacity="${dimmed ? 0.12 : 0.82}" stroke="rgba(0,0,0,.35)" stroke-width="1.5"
+        style="cursor:${hasSubs ? 'pointer' : 'default'}"/>`;
+
+      if (!dimmed) {
+        const lines = wrapText(s.name || s.id, 13);
+        const lh = 12, th = lines.length * lh;
+        lines.forEach((line, i) => {
+          html += `<text x="${pos.x}" y="${pos.y + (-th/2 + i*lh + lh/2)}" text-anchor="middle"
+            dominant-baseline="central" font-size="10" font-weight="500"
+            fill="white" paint-order="stroke" stroke="rgba(0,0,0,.7)"
+            stroke-width="2" stroke-linejoin="round"
+            class="node" data-id="${s.id}" style="pointer-events:none">${line}</text>`;
+        });
+      }
+    });
+
+    // Center marker (dashed ring at parent position)
+    html += `<circle cx="${parentPos.x}" cy="${parentPos.y}" r="4"
+      fill="none" stroke="${accentColor}" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.5"/>`;
+  }
+
+  svg.innerHTML = html;
+  attachEvents(svg);
+}
+
+// ── Pop & collapse ────────────────────────────────────────────────────────────
+
+function popCluster(id) {
+  const subs = getSubClusters(id);
+  if (!subs.length) return;
+
+  const { W, H, pad } = plotDims();
+  const parentPos = state.positions[id] || { x: W/2, y: H/2 };
+
+  // Push onto navigation stack
+  state.path.push(id);
+
+  // Start subs collapsed at parent position
+  subs.forEach(s => { state.positions[s.id] = { ...parentPos }; });
+  render();
+
+  // Compute target positions as offsets from parent (keeps parent centered)
+  const axes = localBestAxes(id) || globalBestAxes();
+  const spread = Math.min(W - pad.left - pad.right, H - pad.top - pad.bottom) * 0.36;
+  const targets = {};
+  subs.forEach((s, idx) => {
+    let dx, dy;
+    const lp = PCA.local_pca?.[id];
+    if (lp?.sub_positions?.[s.id]) {
+      const xNorm = lp.sub_positions[s.id][axes.x + '_norm'] ?? 0.5;
+      const yNorm = lp.sub_positions[s.id][axes.y + '_norm'] ?? 0.5;
+      // Offset from parent: (0.5, 0.5) → center (no offset)
+      dx = (xNorm - 0.5) * spread * 2;
+      dy = -(yNorm - 0.5) * spread * 2;  // SVG y inverted
+    } else {
+      // Fallback: evenly spaced on a circle
+      const angle = (idx / subs.length) * 2 * Math.PI - Math.PI / 2;
+      dx = Math.cos(angle) * spread;
+      dy = Math.sin(angle) * spread;
+    }
+    targets[s.id] = { x: parentPos.x + dx, y: parentPos.y + dy };
+  });
+
+  animate(targets, 520);
+  updateBreadcrumb();
+  document.getElementById('back-btn').classList.add('visible');
+  updateFilterChips();
+}
+
+// Go back one level (or all the way to macro if called from breadcrumb root)
+function collapseBack() {
+  if (isAtMacro()) return;
+  const { W, H } = plotDims();
+  const parentId = currentParentId();
+  const subs = getSubClusters(parentId);
+  const parentPos = state.positions[parentId] || { x: W/2, y: H/2 };
+  const targets = {};
+  subs.forEach(s => { targets[s.id] = { ...parentPos }; });
+
+  animate(targets, 380, () => {
+    state.path.pop();
+    render();
+    updateBreadcrumb();
+    if (isAtMacro()) {
+      document.getElementById('back-btn').classList.remove('visible');
+    }
+    updateFilterChips();
+  });
+}
+
+// Alias so existing onclick="collapseToMacro()" keeps working
+function collapseToMacro() { collapseBack(); }
+
+// ── Animation ─────────────────────────────────────────────────────────────────
+
+function animate(targets, duration, onDone) {
+  const from = {};
+  Object.keys(targets).forEach(id => {
+    from[id] = { ...state.positions[id] };
+  });
+  const start = performance.now();
+  function ease(t) { return t < .5 ? 2*t*t : -1+(4-2*t)*t; }
+  function frame(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const e = ease(t);
+    Object.keys(targets).forEach(id => {
+      state.positions[id] = {
+        x: from[id].x + (targets[id].x - from[id].x) * e,
+        y: from[id].y + (targets[id].y - from[id].y) * e,
+      };
+    });
+    render();
+    if (t < 1) requestAnimationFrame(frame);
+    else if (onDone) onDone();
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+
+function attachEvents(svg) {
+  svg.querySelectorAll('.node').forEach(el => {
+    el.addEventListener('click', e => handleClick(e.currentTarget.dataset.id));
+    el.addEventListener('mouseenter', e => showTooltip(e, e.currentTarget.dataset.id));
+    el.addEventListener('mousemove', moveTooltip);
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+  svg.querySelectorAll('.macro-bg').forEach(el => {
+    el.addEventListener('click', e => {
+      const id = e.currentTarget.dataset.id;
+      if (state.hidden.has(id)) return;
+      // First collapse back to macro, then pop the clicked one
+      jumpToLevel(-1);
+      setTimeout(() => popCluster(id), 320);
+    });
+    el.addEventListener('mouseenter', e => showTooltip(e, e.currentTarget.dataset.id));
+    el.addEventListener('mousemove', moveTooltip);
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+function handleClick(id) {
+  hideTooltip();
+  if (state.hidden.has(id)) return;
+  const subs = getSubClusters(id);
+  if (subs.length >= 2) popCluster(id);
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────────────
+
+function showTooltip(e, id) {
+  const c = findCluster(id);
+  if (!c) return;
+  const tags = (c.top_hashtags || []).slice(0, 6).map(t => `<span class="tt-tag">#${t}</span>`).join('');
+  const reach = c.reach >= 1e6 ? (c.reach/1e6).toFixed(1)+'M' : c.reach >= 1e3 ? Math.round(c.reach/1e3)+'K' : c.reach || '—';
+  const hint = (c.subclusters?.length >= 2) ? '<div class="tt-hint">Klik om in te zoomen →</div>' : '';
+  document.getElementById('tooltip').innerHTML = `
+    <div class="tt-name">${c.name || c.id}</div>
+    <div class="tt-meta">${c.size || '?'} accounts · ${reach} volgers</div>
+    <div class="tt-tags">${tags}</div>
+    ${hint}
+  `;
+  document.getElementById('tooltip').classList.add('visible');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const tt = document.getElementById('tooltip');
+  const wrap = document.getElementById('canvas-wrap');
+  const rect = wrap.getBoundingClientRect();
+  let x = e.clientX - rect.left + 14;
+  let y = e.clientY - rect.top + 14;
+  if (x + 280 > rect.width) x = e.clientX - rect.left - 276;
+  if (y + 160 > rect.height) y = e.clientY - rect.top - 156;
+  tt.style.left = x + 'px';
+  tt.style.top  = y + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
+function updateAxisPills(axes, localId) {
+  const ix = axisInfo(axes.x, localId);
+  const iy = axisInfo(axes.y, localId);
+  document.getElementById('x-label').textContent = `${ix.name} · ${ix.lo} → ${ix.hi}`;
+  document.getElementById('y-label').textContent = `${iy.name} · ${iy.lo} → ${iy.hi}`;
+}
+
+function updateSidebar(axes, localId) {
+  const cluster = localId ? findCluster(localId) : null;
+  const subs = localId ? getSubClusters(localId) : getMacroClusters();
+  // count only if subs exist, otherwise count macro
+  const n = subs.reduce((s, c) => s + (c.size || 0), 0);
+
+  document.getElementById('sidebar-title').textContent = cluster ? cluster.name : 'Nederlands TikTok';
+  document.getElementById('sidebar-meta').textContent = `${subs.length} clusters · ${n} accounts`;
+
+  // Axis explanation
+  const axContent = document.getElementById('axes-content');
+  axContent.innerHTML = [axes.x, axes.y].map((pc, i) => {
+    const color = i === 0 ? 'var(--accent-x)' : 'var(--accent-y)';
+    const eta   = eta2Value(pc, localId);
+    const info  = axisInfo(pc, localId);
+    const corr  = !localId ? topCorrelation(pc) : null;
+    const corrStr = corr ? `<div style="font-size:10px;color:var(--dimmer);margin-top:3px">↔ ${corr}</div>` : '';
+    const ratStr  = info.rationale
+      ? `<div style="font-size:10px;color:var(--dim);margin-top:5px;line-height:1.4">${info.rationale}</div>`
+      : '';
+    return `
+      <div class="axis-block">
+        <div class="axis-block-label">
+          <div class="swatch" style="background:${color}"></div>
+          <strong>${info.name}</strong>
+          ${corrStr}
+        </div>
+        <div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">eta²=${eta.toFixed(3)}</div>
+        <div class="axis-poles">
+          <div class="axis-pole"><span class="arrow">↑</span> <span style="color:var(--text);font-size:11px">${info.hi}</span></div>
+          <div class="axis-pole"><span class="arrow">↓</span> <span style="color:var(--text);font-size:11px">${info.lo}</span></div>
+        </div>
+        ${ratStr}
+        <div class="eta-bar" style="margin-top:6px"><div class="eta-fill" style="width:${Math.round(eta*100)}%;background:${color}"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function topCorrelation(pc) {
+  const corrs = PCA.correlations_with_handcrafted?.[pc];
+  if (!corrs) return null;
+  const entries = Object.entries(corrs).map(([ax, v]) => [ax, Math.abs(v.r || 0)]);
+  entries.sort((a, b) => b[1] - a[1]);
+  if (!entries.length || entries[0][1] < 0.4) return null;
+  const [ax, r] = entries[0];
+  const rVal = corrs[ax].r;
+  const NAMES = {
+    political_lr: 'Links–Rechts', institutional_trust: 'Inst. vertrouwen',
+    religious_identity: 'Religieuze identiteit', bubble_closure: 'Geslotenheid',
+    cultural_vs_political: 'Cultureel vs. politiek', reach: 'Bereik',
+  };
+  return `${NAMES[ax] || ax} r=${rVal > 0 ? '+' : ''}${rVal.toFixed(2)}`;
+}
+
+function updateFilterChips() {
+  const parentId = currentParentId();
+  const clusters = parentId ? getSubClusters(parentId) : getMacroClusters();
+  const chips = document.getElementById('filter-chips');
+  chips.innerHTML = clusters.map(c => {
+    const hidden = state.hidden.has(c.id);
+    const color = c.color || findCluster(c.id)?.color || '#888';
+    return `<div class="filter-chip ${hidden ? 'hidden' : ''}" data-id="${c.id}" onclick="toggleHide('${c.id}')">
+      <div class="chip-dot" style="background:${color}"></div>
+      <div class="chip-name">${c.name || c.id}</div>
+      <div class="chip-n">${c.size || 0}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleHide(id) {
+  if (state.hidden.has(id)) state.hidden.delete(id);
+  else state.hidden.add(id);
+  render();
+  updateFilterChips();
+}
+
+function updateBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  if (isAtMacro()) {
+    bc.innerHTML = `<span class="active">Nederlands TikTok</span>`;
+    return;
+  }
+  // Build breadcrumb for each step in path
+  let html = `<span style="cursor:pointer;color:var(--dim)" onclick="jumpToLevel(-1)">Nederlands TikTok</span>`;
+  state.path.forEach((id, i) => {
+    const c = findCluster(id);
+    const isLast = i === state.path.length - 1;
+    html += `<span class="sep">›</span>`;
+    if (isLast) {
+      html += `<span class="active">${c?.name || id}</span>`;
+    } else {
+      html += `<span style="cursor:pointer;color:var(--dim)" onclick="jumpToLevel(${i})">${c?.name || id}</span>`;
+    }
+  });
+  bc.innerHTML = html;
+}
+
+// Jump to a specific level in the path (-1 = macro root)
+function jumpToLevel(idx) {
+  if (idx < 0) {
+    // Go all the way back to macro
+    function collapseStep() {
+      if (isAtMacro()) { render(); updateBreadcrumb(); updateFilterChips(); return; }
+      const parentId = currentParentId();
+      const subs = getSubClusters(parentId);
+      const parentPos = state.positions[parentId] || { x: 0, y: 0 };
+      const targets = {};
+      subs.forEach(s => { targets[s.id] = { ...parentPos }; });
+      animate(targets, 260, () => { state.path.pop(); collapseStep(); });
+    }
+    collapseStep();
+    document.getElementById('back-btn').classList.remove('visible');
+  } else {
+    // Jump to idx in path (collapse deeper levels one-by-one)
+    function collapseStep() {
+      if (state.path.length <= idx + 1) { render(); updateBreadcrumb(); updateFilterChips(); return; }
+      const parentId = currentParentId();
+      const subs = getSubClusters(parentId);
+      const parentPos = state.positions[parentId] || { x: 0, y: 0 };
+      const targets = {};
+      subs.forEach(s => { targets[s.id] = { ...parentPos }; });
+      animate(targets, 240, () => { state.path.pop(); collapseStep(); });
+    }
+    collapseStep();
+  }
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function wrapText(text, maxLen) {
+  const words = (text || '').split(' ');
+  const lines = []; let cur = '';
+  for (const w of words) {
+    if ((cur + ' ' + w).trim().length > maxLen && cur) {
+      lines.push(cur.trim()); cur = w;
+    } else { cur = (cur + ' ' + w).trim(); }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+function init() {
+  // Initial macro positions
+  const { W, H, pad } = plotDims();
+  const axes = globalBestAxes();
+  getMacroClusters().forEach(c => {
+    const xv = pcScore(c.id, axes.x);
+    const yv = pcScore(c.id, axes.y);
+    state.positions[c.id] = toSvg(xv, yv, W, H, pad);
+  });
+
+  updateFilterChips();
+  render();
+}
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+
+const ro = new ResizeObserver(() => {
+  if (BT && PCA) render();
+});
+ro.observe(document.getElementById('plot'));
+
+window.addEventListener('resize', () => { if (BT && PCA) render(); });
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>

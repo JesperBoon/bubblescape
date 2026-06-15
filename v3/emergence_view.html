@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubblescape v3 — Emergence</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --accent: #FF2D55;
+  --bg: #000;
+  --panel: #080808;
+  --line: #141414;
+  --bridge: #F5A623;
+  --real: #36E0A4;     /* robust / "real" green */
+  --muted: #555;
+}
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+  background: var(--bg); color: #e0e0e0; overflow: hidden; height: 100vh;
+}
+#stage { position: absolute; inset: 0; }
+svg#scene { width: 100%; height: 100%; display: block; }
+
+/* ── header ───────────────────────────────────────── */
+#header {
+  position: absolute; top: 0; left: 0; right: 0; padding: 16px 22px 0;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  z-index: 10; pointer-events: none;
+}
+#header * { pointer-events: auto; }
+#header-left h1 { font-size: 18px; font-weight: 800; letter-spacing: .02em; color: #fff; }
+#header-left h1 small { color: var(--accent); font-weight: 800; }
+#header-left p { font-size: 10.5px; color: #666; margin-top: 3px; max-width: 380px; line-height: 1.5; }
+#header-right { display: flex; gap: 8px; align-items: center; }
+.hbtn {
+  background: var(--panel); border: 1px solid var(--line); color: #888;
+  font-size: 11px; font-weight: 600; padding: 7px 12px; border-radius: 7px;
+  cursor: pointer; transition: all .15s; white-space: nowrap; text-decoration: none;
+}
+.hbtn:hover { color: #fff; border-color: #2a2a2a; }
+
+/* ── strata legend (bottom-left, persistent) ──────── */
+#strata {
+  position: absolute; bottom: 18px; left: 18px; z-index: 10;
+  background: rgba(8,8,8,.82); border: 1px solid var(--line); border-radius: 9px;
+  padding: 13px 15px; width: 300px; backdrop-filter: blur(6px);
+}
+#strata h2 { font-size: 9px; font-weight: 800; color: #444; text-transform: uppercase; letter-spacing: .14em; margin-bottom: 10px; }
+.srow { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 9px; }
+.sw { width: 26px; height: 26px; flex-shrink: 0; border-radius: 5px; margin-top: 1px; position: relative; }
+.sw-real { border: 1.5px dashed #ffffff2e; background: #ffffff05; }
+.sw-actual { background: radial-gradient(circle, #5B4FCF55, #5B4FCF12); border: 1px solid #5B4FCF66; }
+.sw-robust { background: radial-gradient(circle, #36E0A455, #36E0A412); border: 1.5px solid #36E0A4; }
+.sw-emp { background: #0c0c0c; border: 1px solid #1c1c1c; }
+.sw-emp::after { content:""; position:absolute; width:7px; height:7px; border-radius:50%; background:#bbb; top:50%; left:50%; transform:translate(-50%,-50%); }
+.slbl { font-size: 11px; line-height: 1.35; }
+.slbl b { color: #fff; font-weight: 700; display:block; font-size: 11.5px; letter-spacing: .03em; }
+.slbl span { color: #777; }
+#honesty {
+  margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line);
+  font-size: 10.5px; line-height: 1.5; color: #888;
+}
+#honesty b { color: var(--real); font-weight: 700; }
+
+/* ── dial (bottom-center) ─────────────────────────── */
+#dial {
+  position: absolute; bottom: 22px; right: 22px;
+  z-index: 12; width: 460px; max-width: calc(100vw - 360px);
+  background: rgba(8,8,8,.86); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 18px 16px; backdrop-filter: blur(6px);
+}
+#dial-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+#dial-label { font-size: 9px; font-weight: 800; color: #555; text-transform: uppercase; letter-spacing: .14em; }
+#dial-readout { font-size: 11px; color: #888; font-variant-numeric: tabular-nums; }
+#dial-readout b { color: #fff; }
+#mode {
+  display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .05em;
+  padding: 3px 10px; border-radius: 99px; text-transform: uppercase;
+}
+#mode.real { color: var(--real); background: #36e0a418; border: 1px solid #36e0a455; }
+#mode.trans { color: var(--bridge); background: #f5a62318; border: 1px solid #f5a62355; }
+#strip-wrap { position: relative; height: 30px; }
+canvas#strip { width: 100%; height: 30px; display:block; border-radius: 6px; }
+input#knob {
+  -webkit-appearance: none; appearance: none; position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0; width: 100%; height: 30px;
+  background: transparent; margin: 0; cursor: ew-resize;
+}
+input#knob::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 6px; height: 38px; border-radius: 3px;
+  background: #fff; border: 1px solid #000; box-shadow: 0 0 0 1px #fff, 0 0 10px #000;
+  margin-top: -4px;
+}
+input#knob::-moz-range-thumb {
+  width: 6px; height: 38px; border-radius: 3px; border: 1px solid #000;
+  background: #fff; box-shadow: 0 0 0 1px #fff;
+}
+input#knob::-moz-range-track { background: transparent; }
+#strip-axis { display:flex; justify-content: space-between; margin-top: 6px; font-size: 9px; color: #444; }
+#dial-hint { margin-top: 9px; font-size: 10px; color: #666; line-height: 1.5; text-align:center; }
+#dial-hint b { color: var(--real); }
+
+/* ── svg pieces ───────────────────────────────────── */
+.bubble .b-fill { transition: cx .5s cubic-bezier(.4,0,.2,1), cy .5s cubic-bezier(.4,0,.2,1), r .5s cubic-bezier(.4,0,.2,1), opacity .4s ease, fill .4s ease; }
+.bubble .b-ring { transition: cx .5s cubic-bezier(.4,0,.2,1), cy .5s cubic-bezier(.4,0,.2,1), r .5s cubic-bezier(.4,0,.2,1), opacity .4s ease, stroke .4s ease, stroke-width .25s ease; }
+.bubble .b-lbl  { transition: x .5s cubic-bezier(.4,0,.2,1), y .5s cubic-bezier(.4,0,.2,1), opacity .4s ease; }
+.b-lbl { paint-order: stroke; stroke: #000; stroke-width: 4px; stroke-linejoin: round; pointer-events: none; text-anchor: middle; }
+.b-lbl-name { font-size: 13px; font-weight: 800; }
+.b-lbl-sub  { font-size: 9px; font-weight: 700; letter-spacing: .04em; }
+.dot { cursor: pointer; transition: opacity .3s ease; }
+.dot:hover { opacity: 1 !important; }
+.real-badge { font-size: 8px; font-weight: 800; letter-spacing: .08em; }
+
+/* ── account tooltip / panel ──────────────────────── */
+#panel {
+  position: absolute; top: 0; right: -360px; width: 340px; bottom: 0;
+  background: var(--panel); border-left: 1px solid var(--line); padding: 22px 22px 30px;
+  overflow-y: auto; z-index: 30; transition: right .28s cubic-bezier(.4,0,.2,1);
+}
+#panel.open { right: 0; }
+#panel-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: #444; font-size: 22px; cursor: pointer; line-height: 1; }
+#panel-close:hover { color: #fff; }
+.p-kicker { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.p-name { font-size: 20px; font-weight: 800; color: #fff; word-break: break-all; line-height: 1.15; }
+.p-sub { font-size: 12px; color: #555; margin-top: 4px; }
+.p-section { margin-top: 20px; }
+.p-section-title { font-size: 9px; font-weight: 800; color: #333; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 9px; border-bottom: 1px solid #0f0f0f; padding-bottom: 6px; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag { background: #0c0c0c; border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; font-size: 11px; color: #aaa; }
+.p-chain { font-size: 11.5px; line-height: 1.7; color: #aaa; }
+.p-chain .cur { color:#fff; font-weight:700; }
+.p-chain .rb { color: var(--real); font-weight:700; }
+.p-chain .tb { color: var(--bridge); font-weight:700; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <svg id="scene" viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="7"/>
+      </filter>
+    </defs>
+    <rect id="realfield" x="22" y="22" width="956" height="636" rx="20"
+          fill="#ffffff04" stroke="#ffffff22" stroke-width="1.5" stroke-dasharray="7 8"/>
+    <text id="realfield-lbl" x="40" y="50" font-size="10" font-weight="800"
+          letter-spacing="2" fill="#ffffff33"></text>
+    <g id="bubbles"></g>
+    <g id="dots"></g>
+  </svg>
+</div>
+
+<div id="header">
+  <div id="header-left">
+    <h1>BUBBLE<small>SCAPE</small> · <span data-i18n="title">Emergentie</span></h1>
+    <p data-i18n="subtitle"></p>
+  </div>
+  <div id="header-right">
+    <a class="hbtn" href="strata_view.html" data-i18n="toStrata">← Strata-weergave</a>
+    <button class="hbtn" id="lang-btn" onclick="toggleLang()">EN</button>
+  </div>
+</div>
+
+<!-- legend -->
+<div id="strata">
+  <h2 data-i18n="legendTitle">Drie lagen</h2>
+  <div class="srow">
+    <div class="sw sw-real"></div>
+    <div class="slbl"><b data-i18n="realName">REËEL</b><span data-i18n="realDesc"></span></div>
+  </div>
+  <div class="srow">
+    <div class="sw sw-actual"></div>
+    <div class="slbl"><b data-i18n="actualName">ACTUEEL</b><span data-i18n="actualDesc"></span></div>
+  </div>
+  <div class="srow">
+    <div class="sw sw-robust"></div>
+    <div class="slbl"><b data-i18n="robustName">ROBUUST</b><span data-i18n="robustDesc"></span></div>
+  </div>
+  <div class="srow">
+    <div class="sw sw-emp"></div>
+    <div class="slbl"><b data-i18n="empName">EMPIRISCH</b><span data-i18n="empDesc"></span></div>
+  </div>
+  <div id="honesty" data-i18n-html="honesty"></div>
+</div>
+
+<!-- dial -->
+<div id="dial">
+  <div id="dial-top">
+    <span id="dial-label" data-i18n="dialLabel">Schaal-knop</span>
+    <span id="dial-readout"></span>
+  </div>
+  <div style="text-align:center; margin-bottom:8px;"><span id="mode"></span></div>
+  <div id="strip-wrap">
+    <canvas id="strip" width="1040" height="60"></canvas>
+    <input type="range" id="knob" min="0" max="1000" value="260">
+  </div>
+  <div id="strip-axis">
+    <span data-i18n="coarse">grof · 1 veld</span>
+    <span data-i18n="fine">fijn · veel bubbels</span>
+  </div>
+  <div id="dial-hint" data-i18n-html="dialHint"></div>
+</div>
+
+<!-- account panel -->
+<div id="panel">
+  <button id="panel-close" onclick="closePanel()">×</button>
+  <div id="panel-body"></div>
+</div>
+
+<script>
+/* ══════════════ i18n ══════════════ */
+const LANG = {
+  nl: {
+    title: "Emergentie",
+    subtitle: "Draai aan de schaal-knop. Bubbels splitsen en smelten samen. De lagen die blijven stáán terwijl je draait — dát zijn de echte.",
+    toStrata: "← Strata-weergave",
+    legendTitle: "Drie lagen + robuustheid",
+    realName: "REËEL", realDesc: "het hele veld — alles wat bestaat",
+    actualName: "ACTUEEL", actualDesc: "patronen die het model afleidt op deze schaal",
+    robustName: "ROBUUST = ECHT", robustDesc: "blijft staan over een breed schaalbereik",
+    empName: "EMPIRISCH", empDesc: "de losse accounts die we echt waarnemen",
+    honesty: "Een bubbel die alleen bij één knop-stand verschijnt is een <b>artefact van de waarnemer</b>, geen structuur. Wat de hele draai overleeft, behandelen we als reëel.",
+    dialLabel: "Schaal-knop  (resolutie γ / Markov-tijd t)",
+    coarse: "grof · 1 veld", fine: "fijn · veel bubbels",
+    dialHint: "Groene zones = <b>stabiele plateaus</b>: hier verandert de indeling niet als je draait. Tik op een account voor zijn schaal-spoor.",
+    modeReal: "REËEL STRATUM — stabiel over schaal",
+    modeTrans: "OVERGANG — indeling hangt af van de knop",
+    readBubbles: "bubbels", readGamma: "γ",
+    pKicker: "Account · schaal-spoor",
+    pProfile: "Profiel", pChainTitle: "Waar dit account zit per schaal",
+    pFollowers: "volgers", pTags: "Top-hashtags",
+    chainAt: "bij", chainIn: "zit in",
+    robustTag: "robuust", transTag: "vluchtig",
+    realStratum: "REËEL", actualOnly: "alleen actueel",
+  },
+  en: {
+    title: "Emergence",
+    subtitle: "Turn the scale dial. Bubbles split and merge. The layers that stay still while you turn — those are the real ones.",
+    toStrata: "← Strata view",
+    legendTitle: "Three layers + robustness",
+    realName: "REAL", realDesc: "the whole field — everything that exists",
+    actualName: "ACTUAL", actualDesc: "patterns the model infers at this scale",
+    robustName: "ROBUST = REAL", robustDesc: "holds across a wide range of scales",
+    empName: "EMPIRICAL", empDesc: "the individual accounts we actually observe",
+    honesty: "A bubble that appears at only one dial position is an <b>artefact of the observer</b>, not structure. What survives the whole sweep we treat as real.",
+    dialLabel: "Scale dial  (resolution γ / Markov time t)",
+    coarse: "coarse · 1 field", fine: "fine · many bubbles",
+    dialHint: "Green zones = <b>stable plateaus</b>: the partition doesn't change as you turn here. Tap an account for its scale-trace.",
+    modeReal: "REAL STRATUM — stable across scale",
+    modeTrans: "TRANSITION — partition depends on the dial",
+    readBubbles: "bubbles", readGamma: "γ",
+    pKicker: "Account · scale trace",
+    pProfile: "Profile", pChainTitle: "Where this account sits per scale",
+    pFollowers: "followers", pTags: "Top hashtags",
+    chainAt: "at", chainIn: "sits in",
+    robustTag: "robust", transTag: "ephemeral",
+    realStratum: "REAL", actualOnly: "actual only",
+  }
+};
+let currentLang = "nl";
+function t(k){ return LANG[currentLang]?.[k] ?? LANG.nl[k] ?? k; }
+function lbl(x){ if(x==null) return ""; return (typeof x==="object") ? (x[currentLang] ?? x.nl ?? x.en) : x; }
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el=>{ el.innerHTML = t(el.dataset.i18nHtml); });
+  document.getElementById("lang-btn").textContent = currentLang==="nl" ? "EN" : "NL";
+  document.getElementById("realfield-lbl").textContent = currentLang==="nl" ? "REËEL VELD — alles wat bestaat" : "REAL FIELD — everything that exists";
+  document.documentElement.lang = currentLang;
+}
+function toggleLang(){ currentLang = currentLang==="nl" ? "en" : "nl"; applyI18n(); update(true); if(openAcct) showPanel(openAcct); }
+
+/* ══════════════ deterministic rng ══════════════ */
+function hashStr(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let tt=Math.imul(a^a>>>15,1|a); tt=tt+Math.imul(tt^tt>>>7,61|tt)^tt; return ((tt^tt>>>14)>>>0)/4294967296; }; }
+
+/* ══════════════ regime colours (pure fn) ══════════════ */
+const REGIME_COLORS = {
+  humor:"#1D9E75", memes:"#27C08A", lifestyle:"#1B8E63",
+  politiek:"#5B4FCF", rechts:"#8B5BD8", links:"#4F6FCF",
+  sport:"#D97B2C", voetbal:"#E0902E", oranje:"#E8B23A", nieuws:"#C25A2C",
+  mixed:"#6a6a6a"
+};
+function regimeColor(r){
+  if(!r) return "#5a5a5a";
+  if(REGIME_COLORS[r]) return REGIME_COLORS[r];
+  const h = hashStr(r)%360; return `hsl(${h},42%,52%)`;
+}
+function hexA(hex,a){
+  if(hex[0]!=="#"||hex.length<7) return hex;
+  const n=parseInt(hex.slice(1),16);
+  return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;
+}
+
+/* ══════════════ the mock hierarchy ══════════════
+   splitAt = the dial value γ above which this node breaks into its children.
+   The GAPS between all splitAt values are the plateaus. Wide gap = robust scale. */
+const NEVER = 1.1;
+const TREE = {
+  id:"root", label:{nl:"Nederlandse TikTok",en:"Dutch TikTok"}, regime:"mixed", splitAt:0.12,
+  children:[
+    { id:"A", label:{nl:"Humor & lifestyle",en:"Humour & lifestyle"}, regime:"humor", splitAt:0.40,
+      children:[
+        { id:"A1", label:{nl:"Sketch-humor",en:"Sketch comedy"}, regime:"humor", splitAt:0.68,
+          children:[
+            { id:"A1a", label:{nl:"Gen-Z memes",en:"Gen-Z memes"}, regime:"memes", splitAt:NEVER,
+              accounts:["meme.koning","brainrot.nl","sigma.kees","npc.daan","ohio.fries","rizz.lotte"] },
+            { id:"A1b", label:{nl:"Familie-humor",en:"Family humour"}, regime:"humor", splitAt:NEVER,
+              accounts:["huiskamer.lol","dehuiskamer","pa_enzo","tante.ria","gezinsgekte","opa.vertelt"] },
+          ]},
+        { id:"A2", label:{nl:"Schoonmaak & huis",en:"Cleaning & home"}, regime:"lifestyle", splitAt:NEVER,
+          accounts:["cleanwithfem","opgeruimdhuis","schoonmaaktips","mariekehome","poetsqueen","interieurnl"] },
+      ]},
+    { id:"B", label:{nl:"Politiek",en:"Politics"}, regime:"politiek", splitAt:0.42,
+      children:[
+        { id:"B1", label:{nl:"Rechts-populistisch",en:"Right-populist"}, regime:"rechts", splitAt:0.70,
+          children:[
+            { id:"B1a", label:{nl:"Anti-establishment",en:"Anti-establishment"}, regime:"rechts", splitAt:NEVER,
+              accounts:["kritischekees","wakkernederland","rechtdoorzee","soevereinNL","grenzendicht","kieswijzer.demo"] },
+            { id:"B1b", label:{nl:"Boeren & platteland",en:"Farmers & countryside"}, regime:"rechts", splitAt:NEVER,
+              accounts:["boerentrots","stikstofnee","trekkerpower","plattelandstem","agrinederland","melkveehouder"] },
+          ]},
+        { id:"B2", label:{nl:"Links / activisme",en:"Left / activism"}, regime:"links", splitAt:NEVER,
+          accounts:["klimaatjuf","extinctionnl","linksvoor","dekloofdichten","woonprotest","jongeklimaat"] },
+      ]},
+    { id:"C", label:{nl:"Sport & nieuws",en:"Sport & news"}, regime:"sport", splitAt:0.45,
+      children:[
+        { id:"C1", label:{nl:"Voetbal",en:"Football"}, regime:"voetbal", splitAt:0.66,
+          children:[
+            { id:"C1a", label:{nl:"Eredivisie",en:"Eredivisie"}, regime:"voetbal", splitAt:NEVER,
+              accounts:["ajaxfanpage","feyenoordcore","clubsupporter.nl","utrechtlegioen","eredivisietalk","voetbalnieuwsnl"] },
+            { id:"C1b", label:{nl:"Oranje & internationaal",en:"Oranje & international"}, regime:"oranje", splitAt:NEVER,
+              accounts:["oranjekoorts","oranjesupporter","wkfan2026","spitsfan10","voetbalintl","oranjehooligan"] },
+          ]},
+        { id:"C2", label:{nl:"Nieuws & media",en:"News & media"}, regime:"nieuws", splitAt:NEVER,
+          accounts:["jongnieuws","nieuwsupdate","dagelijksnl","podcastpraat","duidingnl","journaalfan"] },
+      ]},
+  ]
+};
+
+/* ── derive: parent links, account positions, descendant lists ── */
+const ACCT = {};   // username -> {x,y, leaf, followers}
+function attach(node, parent){
+  node.parent = parent;
+  node.parentSplit = parent ? parent.splitAt : 0;
+  if(node.children) node.children.forEach(c=>attach(c,node));
+}
+attach(TREE, null);
+
+function leavesOf(node){
+  if(!node.children) return [node];
+  return node.children.flatMap(leavesOf);
+}
+function accountsOf(node){
+  return leavesOf(node).flatMap(l=>l.accounts);
+}
+
+/* spatial layout: clusters near their siblings so a parent circle naturally encloses children */
+function placePositions(){
+  const rng = mulberry32(20260613);
+  function walk(node, cx, cy, spread, rot){
+    node.cx=cx; node.cy=cy;
+    if(node.children){
+      const n=node.children.length;
+      node.children.forEach((c,i)=>{
+        const ang = rot + (i/n)*Math.PI*2;
+        walk(c, cx+Math.cos(ang)*spread, cy+Math.sin(ang)*spread, spread*0.46, rot+1.1);
+      });
+    } else {
+      node.accounts.forEach(acc=>{
+        const r = Math.sqrt(rng())*spread*0.85;
+        const a = rng()*Math.PI*2;
+        ACCT[acc] = {
+          x: cx+Math.cos(a)*r, y: cy+Math.sin(a)*r, leaf: node,
+          followers: Math.round(800*Math.pow(10, rng()*2.6))
+        };
+      });
+    }
+  }
+  walk(TREE, 500, 332, 188, 0.35);
+}
+placePositions();
+
+/* enclosing circle of a node from its accounts' positions */
+function enclosing(node){
+  const accs = accountsOf(node);
+  let sx=0,sy=0;
+  accs.forEach(a=>{ sx+=ACCT[a].x; sy+=ACCT[a].y; });
+  const cx=sx/accs.length, cy=sy/accs.length;
+  let maxd=0;
+  accs.forEach(a=>{ const d=Math.hypot(ACCT[a].x-cx, ACCT[a].y-cy); if(d>maxd) maxd=d; });
+  return { cx, cy, r: maxd+26 };
+}
+
+/* ── breakpoints & robustness ── */
+function allSplits(){
+  const s=[];
+  (function walk(n){ if(n.splitAt<=1) s.push(n.splitAt); if(n.children) n.children.forEach(walk); })(TREE);
+  return [...new Set(s)].sort((a,b)=>a-b);
+}
+const BREAKS = allSplits();                       // e.g. .12 .40 .42 .45 .66 .68 .70
+const ROBUST_LIFESPAN = 0.18;                     // a cluster surviving this much γ = "real"
+
+/* the plateaus = gaps between consecutive breakpoints (plus ends 0 and 1) */
+function plateaus(){
+  const edges=[0,...BREAKS,1];
+  const out=[];
+  for(let i=0;i<edges.length-1;i++){
+    out.push({a:edges[i], b:edges[i+1], w:edges[i+1]-edges[i]});
+  }
+  return out;
+}
+const PLATEAUS = plateaus();
+function plateauAt(g){ return PLATEAUS.find(p=> g>=p.a && g<p.b) || PLATEAUS[PLATEAUS.length-1]; }
+function distToBreak(g){ return Math.min(...BREAKS.map(b=>Math.abs(b-g))); }
+
+/* clusters visible at dial value g */
+function clustersAt(g){
+  const out=[];
+  (function walk(n){
+    if(g >= n.splitAt && n.children){ n.children.forEach(walk); }
+    else out.push(n);
+  })(TREE);
+  return out;
+}
+function lifespanOf(node, g){
+  const death = Math.min(node.splitAt, 1);
+  return death - node.parentSplit;
+}
+function isRobust(node){ return (Math.min(node.splitAt,1) - node.parentSplit) >= ROBUST_LIFESPAN; }
+
+/* the full scale-trace of one account: which cluster contains it at each plateau */
+function traceAccount(acc){
+  const leaf = ACCT[acc].leaf;
+  // ancestor chain leaf..root
+  const chain=[]; let n=leaf; while(n){ chain.push(n); n=n.parent; }
+  // for each plateau midpoint, find deepest ancestor that is a visible cluster
+  return PLATEAUS.filter(p=>p.w>0.001).map(p=>{
+    const g=(p.a+p.b)/2;
+    const cl = clustersAt(g).find(c=> chain.includes(c) );
+    return { g, plateau:p, cluster:cl, robust:isRobust(cl) };
+  });
+}
+
+/* ══════════════ rendering ══════════════ */
+const svgNS="http://www.w3.org/2000/svg";
+const gBubbles=document.getElementById("bubbles");
+const gDots=document.getElementById("dots");
+const knob=document.getElementById("knob");
+let openAcct=null;
+
+function gamma(){ return +knob.value/1000; }
+
+/* dots: created once, static */
+function buildDots(){
+  Object.entries(ACCT).forEach(([name,a])=>{
+    const r = 2.2 + Math.log10(a.followers)*1.3;
+    const c=document.createElementNS(svgNS,"circle");
+    c.setAttribute("cx",a.x); c.setAttribute("cy",a.y); c.setAttribute("r",r);
+    c.setAttribute("fill","#d8d8d8"); c.setAttribute("opacity","0.82");
+    c.setAttribute("class","dot"); c.dataset.acc=name;
+    c.addEventListener("click",e=>{ e.stopPropagation(); showPanel(name); });
+    gDots.appendChild(c);
+  });
+}
+buildDots();
+
+/* every node gets ONE persistent <g>, pre-created; updates just toggle opacity + geometry,
+   so the same elements tween between dial positions and no ghosts ever pile up. */
+const bubbleEls={};   // id -> {node, grp, fill, ring, name, sub}
+function buildAllBubbles(){
+  (function walk(node){
+    const grp=document.createElementNS(svgNS,"g"); grp.setAttribute("class","bubble"); grp.style.opacity=0;
+    const fill=document.createElementNS(svgNS,"circle"); fill.setAttribute("class","b-fill"); fill.setAttribute("filter","url(#soft)");
+    const ring=document.createElementNS(svgNS,"circle"); ring.setAttribute("class","b-ring"); ring.setAttribute("fill","none");
+    const name=document.createElementNS(svgNS,"text"); name.setAttribute("class","b-lbl b-lbl-name");
+    const sub =document.createElementNS(svgNS,"text"); sub.setAttribute("class","b-lbl b-lbl-sub");
+    grp.append(fill,ring,name,sub); gBubbles.appendChild(grp);
+    bubbleEls[node.id]={node,grp,fill,ring,name,sub};
+    if(node.children) node.children.forEach(walk);
+  })(TREE);
+}
+buildAllBubbles();
+
+function update(instant){
+  const g=gamma();
+  const clusters=clustersAt(g);
+  const present=new Set(clusters.map(c=>c.id));
+
+  Object.values(bubbleEls).forEach(o=>{
+    const node=o.node;
+    if(!present.has(node.id)){ o.grp.style.opacity=0; o.grp.style.pointerEvents="none"; return; }
+    o.grp.style.pointerEvents="";
+    const {cx,cy,r}=enclosing(node);
+    const col=regimeColor(node.regime);
+    const robust=isRobust(node);
+
+    o.fill.setAttribute("cx",cx); o.fill.setAttribute("cy",cy); o.fill.setAttribute("r",r);
+    o.fill.setAttribute("fill", hexA(col, robust?0.30:0.17));
+
+    o.ring.setAttribute("cx",cx); o.ring.setAttribute("cy",cy); o.ring.setAttribute("r",r);
+    o.ring.setAttribute("stroke", robust ? "var(--real)" : col);
+    o.ring.setAttribute("stroke-width", robust ? 2.4 : 1.2);
+    o.ring.setAttribute("stroke-opacity", robust ? 0.95 : 0.5);
+    o.ring.setAttribute("stroke-dasharray", robust ? "" : "5 6");
+
+    const ly = cy - r + 18;
+    o.name.setAttribute("x",cx); o.name.setAttribute("y",ly);
+    o.name.setAttribute("fill", robust ? "#eafff6" : "#cfcfcf");
+    o.name.textContent = lbl(node.label);
+    o.sub.setAttribute("x",cx); o.sub.setAttribute("y",ly+13);
+    o.sub.setAttribute("fill", robust ? "var(--real)" : hexA(col,0.85));
+    o.sub.textContent = (robust ? "● "+t("robustTag") : "○ "+t("transTag")) + " · " + accountsOf(node).length;
+
+    o.grp.style.opacity=1;
+  });
+
+  // dot tint: colour each dot by the cluster it currently belongs to
+  document.querySelectorAll(".dot").forEach(d=>{
+    const leaf=ACCT[d.dataset.acc].leaf;
+    let chain=[]; let n=leaf; while(n){chain.push(n);n=n.parent;}
+    const cl=clusters.find(c=>chain.includes(c));
+    d.setAttribute("fill", cl ? hexA(regimeColor(cl.regime),1) : "#d8d8d8");
+  });
+
+  updateReadout(g, clusters.length);
+  drawStrip();
+}
+
+/* ── readout + mode ── */
+function updateReadout(g, nB){
+  document.getElementById("dial-readout").innerHTML =
+    `${t("readGamma")} <b>${g.toFixed(3)}</b> &nbsp;·&nbsp; <b>${nB}</b> ${t("readBubbles")}`;
+  const p=plateauAt(g);
+  const onPlateau = p.w>=0.15 && distToBreak(g)>0.018;
+  const m=document.getElementById("mode");
+  if(onPlateau){ m.className="real"; m.textContent=t("modeReal"); }
+  else { m.className="trans"; m.textContent=t("modeTrans"); }
+}
+
+/* ── stability strip (canvas) ── */
+const strip=document.getElementById("strip");
+const sctx=strip.getContext("2d");
+function drawStrip(){
+  const W=strip.width, H=strip.height;
+  sctx.clearRect(0,0,W,H);
+  // robust plateau bands
+  PLATEAUS.forEach(p=>{
+    const x0=p.a*W, x1=p.b*W;
+    const robust = p.w>=0.15;
+    const grad=sctx.createLinearGradient(0,0,0,H);
+    if(robust){ grad.addColorStop(0,"#36e0a430"); grad.addColorStop(1,"#36e0a410"); }
+    else { grad.addColorStop(0,"#f5a62318"); grad.addColorStop(1,"#f5a62308"); }
+    sctx.fillStyle=grad; sctx.fillRect(x0,0,x1-x0,H);
+  });
+  // continuous stability curve (distance to nearest breakpoint)
+  sctx.beginPath();
+  for(let i=0;i<=W;i++){
+    const g=i/W; const s=Math.min(distToBreak(g)/0.16,1);
+    const y=H-4 - s*(H-12);
+    if(i===0) sctx.moveTo(i,y); else sctx.lineTo(i,y);
+  }
+  sctx.strokeStyle="#ffffff44"; sctx.lineWidth=1.4; sctx.stroke();
+  // breakpoint ticks
+  BREAKS.forEach(b=>{
+    sctx.strokeStyle="#ffffff22"; sctx.lineWidth=1;
+    sctx.beginPath(); sctx.moveTo(b*W,0); sctx.lineTo(b*W,H); sctx.stroke();
+  });
+  // current position
+  const gx=gamma()*W;
+  sctx.strokeStyle="#fff"; sctx.lineWidth=1.5;
+  sctx.beginPath(); sctx.moveTo(gx,0); sctx.lineTo(gx,H); sctx.stroke();
+}
+
+/* ── account panel ── */
+function showPanel(acc){
+  openAcct=acc;
+  const a=ACCT[acc];
+  // collapse consecutive identical strata so each row is a distinct level the account passes through
+  const trace=traceAccount(acc).filter((s,i,arr)=> i===0 || s.cluster.id!==arr[i-1].cluster.id);
+  const rows=trace.map(s=>{
+    const cls = s.robust ? "rb" : "tb";
+    const tag = s.robust ? t("realStratum") : t("actualOnly");
+    const arrow = currentLang==="nl"?"↳":"↳";
+    return `<div><span style="color:#444">${arrow}</span> <span class="${cls}">${lbl(s.cluster.label)}</span> <span style="color:#444">· ${tag}</span></div>`;
+  }).join("");
+  document.getElementById("panel-body").innerHTML = `
+    <div class="p-kicker">${t("pKicker")}</div>
+    <div class="p-name">@${acc}</div>
+    <div class="p-sub">${a.followers.toLocaleString()} ${t("pFollowers")}</div>
+    <div class="p-section">
+      <div class="p-section-title">${t("pChainTitle")}</div>
+      <div class="p-chain">${rows}</div>
+    </div>
+    <div class="p-section">
+      <div class="p-section-title">${t("pProfile")}</div>
+      <div class="p-chain">${currentLang==="nl"?"Vaste kern van":"Stable core of"} <span class="cur">${lbl(a.leaf.label)}</span></div>
+    </div>`;
+  document.getElementById("panel").classList.add("open");
+}
+function closePanel(){ openAcct=null; document.getElementById("panel").classList.remove("open"); }
+
+/* ── wire up ── */
+knob.addEventListener("input",()=>update(false));
+document.getElementById("scene").addEventListener("click",closePanel);
+window.addEventListener("resize",drawStrip);
+
+applyI18n();
+update(true);
+</script>
+</body>
+</html>

@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubblescape v3 — Strata</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --accent: #FF2D55;
+  --bg: #000;
+  --panel: #080808;
+  --line: #141414;
+  --bridge: #F5A623;
+  --muted: #555;
+}
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+  background: var(--bg); color: #e0e0e0; overflow: hidden; height: 100vh;
+}
+#stage { position: absolute; inset: 0; }
+svg { width: 100%; height: 100%; display: block; }
+
+/* ── header ───────────────────────────────────────── */
+#header {
+  position: absolute; top: 0; left: 0; right: 0; padding: 16px 22px 0;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  z-index: 10; pointer-events: none;
+}
+#header * { pointer-events: auto; }
+#header-left h1 { font-size: 18px; font-weight: 800; letter-spacing: .02em; color: #fff; }
+#header-left h1 small { color: var(--accent); font-weight: 800; }
+#header-left p { font-size: 10.5px; color: #555; margin-top: 3px; max-width: 340px; line-height: 1.5; }
+#header-right { display: flex; gap: 8px; align-items: center; }
+.hbtn {
+  background: var(--panel); border: 1px solid var(--line); color: #888;
+  font-size: 11px; font-weight: 600; padding: 7px 12px; border-radius: 7px;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.hbtn:hover { color: #fff; border-color: #2a2a2a; }
+.hbtn.active { color: #fff; border-color: var(--accent); background: #ff2d5512; }
+
+/* ── breadcrumb ───────────────────────────────────── */
+#breadcrumb {
+  position: absolute; top: 70px; left: 22px; z-index: 10;
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap; max-width: 60vw;
+}
+.crumb { font-size: 11.5px; color: #666; cursor: pointer; transition: color .15s; white-space: nowrap; }
+.crumb:hover { color: #fff; }
+.crumb.active { color: #fff; cursor: default; }
+.crumb-sep { font-size: 11px; color: #2a2a2a; }
+.crumb-tag {
+  font-size: 9px; font-weight: 700; color: var(--accent); background: #ff2d5510;
+  border: 1px solid #ff2d5530; border-radius: 99px; padding: 2px 7px; text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+/* ── strata legend (bottom-left, persistent) ──────── */
+#strata {
+  position: absolute; bottom: 18px; left: 18px; z-index: 10;
+  background: rgba(8,8,8,.82); border: 1px solid var(--line); border-radius: 9px;
+  padding: 13px 15px; width: 286px; backdrop-filter: blur(6px);
+}
+#strata h2 { font-size: 9px; font-weight: 800; color: #444; text-transform: uppercase; letter-spacing: .14em; margin-bottom: 10px; }
+.srow { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 9px; }
+.sw { width: 26px; height: 26px; flex-shrink: 0; border-radius: 5px; margin-top: 1px; position: relative; }
+.sw-real { border: 1.5px dashed #ffffff2e; background: #ffffff05; }
+.sw-actual { background: radial-gradient(circle, #5B4FCF55, #5B4FCF12); border: 1px solid #5B4FCF66; }
+.sw-emp { background: #0c0c0c; border: 1px solid #1c1c1c; }
+.sw-emp::after { content:""; position:absolute; width:7px; height:7px; border-radius:50%; background:#bbb; top:50%; left:50%; transform:translate(-50%,-50%); }
+.slbl { font-size: 11px; line-height: 1.35; }
+.slbl b { color: #fff; font-weight: 700; display:block; font-size: 11.5px; letter-spacing: .03em; }
+.slbl span { color: #777; }
+#honesty {
+  margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line);
+  font-size: 10.5px; line-height: 1.5; color: #888;
+}
+#honesty b { color: var(--bridge); font-weight: 700; }
+
+/* ── account / detail panel ───────────────────────── */
+#panel {
+  position: absolute; top: 0; right: -380px; width: 358px; bottom: 0;
+  background: var(--panel); border-left: 1px solid var(--line); padding: 22px 22px 30px;
+  overflow-y: auto; z-index: 30; transition: right .28s cubic-bezier(.4,0,.2,1);
+}
+#panel.open { right: 0; }
+#panel-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: #444; font-size: 22px; cursor: pointer; line-height: 1; }
+#panel-close:hover { color: #fff; }
+.p-kicker { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.p-name { font-size: 21px; font-weight: 800; color: #fff; word-break: break-all; line-height: 1.15; }
+.p-verified { color: #3897f0; font-size: 15px; margin-left: 4px; }
+.p-sub { font-size: 12px; color: #555; margin-top: 4px; }
+.p-section { margin-top: 20px; }
+.p-section-title { font-size: 9px; font-weight: 800; color: #333; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 9px; border-bottom: 1px solid #0f0f0f; padding-bottom: 6px; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag { background: #0c0c0c; border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; font-size: 11px; color: #aaa; }
+.unknown { font-size: 11.5px; color: #555; font-style: italic; }
+.mrow { margin-bottom: 9px; }
+.mrow-head { display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px; }
+.mrow-head b { color: #ddd; font-weight: 600; }
+.mrow-head span { color: #777; font-variant-numeric: tabular-nums; }
+.mbar-bg { background: #0e0e0e; border-radius: 3px; height: 6px; overflow: hidden; }
+.mbar { height: 6px; border-radius: 3px; }
+.badge-bridge {
+  display:inline-flex; align-items:center; gap:5px; font-size: 10px; font-weight: 800;
+  letter-spacing: .06em; color: var(--bridge); background: #f5a6231a; border: 1px solid #f5a62340;
+  border-radius: 99px; padding: 4px 10px; margin-top: 12px;
+}
+
+/* ── bubble / region labels in svg ────────────────── */
+.region-grp { cursor: pointer; }
+.region-fill { transition: opacity .45s ease; }
+.region-ring { transition: opacity .45s ease, stroke-width .2s; }
+.region-grp:hover .region-ring { stroke-width: 2.2; }
+.rlabel { paint-order: stroke; stroke: #000; stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+.rlabel-name { font-size: 13px; font-weight: 800; }
+.rlabel-regime { font-size: 10px; font-weight: 600; }
+.rlabel-count { font-size: 9.5px; }
+.dot { transition: opacity .45s ease; }
+.dot-hit { cursor: pointer; }
+.grp-anim { transition: transform .5s cubic-bezier(.34,.1,.2,1); }
+.dim-momentary { stroke-dasharray: 5 4; }
+
+/* contract panel */
+#contract {
+  position: absolute; inset: 0; z-index: 40; background: rgba(0,0,0,.86);
+  backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; padding: 40px;
+}
+#contract.open { display: flex; }
+#contract-inner {
+  background: #060606; border: 1px solid var(--line); border-radius: 12px; max-width: 680px;
+  width: 100%; max-height: 82vh; overflow-y: auto; padding: 28px 30px;
+}
+#contract-inner h2 { font-size: 16px; color: #fff; margin-bottom: 4px; }
+#contract-inner p.sub { font-size: 12px; color: #666; margin-bottom: 16px; }
+#contract-inner pre {
+  background: #0b0b0b; border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+  font-size: 11px; line-height: 1.55; color: #b9c2cc; overflow-x: auto;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+#contract-inner .k { color: #7aa2ff; } #contract-inner .c { color: #5a6; font-style: italic; }
+#contract-close { float: right; background: none; border: none; color: #555; font-size: 22px; cursor: pointer; }
+#contract-close:hover { color: #fff; }
+
+#tooltip {
+  position: absolute; background: #0a0a0a; border: 1px solid var(--line); border-radius: 6px;
+  padding: 7px 11px; font-size: 11.5px; color: #ccc; pointer-events: none; z-index: 50;
+  opacity: 0; transition: opacity .1s; max-width: 230px; line-height: 1.4;
+}
+.hint { font-size: 10px; color: #444; }
+</style>
+</head>
+<body>
+<div id="stage"><svg id="svg"></svg></div>
+
+<div id="header">
+  <div id="header-left">
+    <h1>Bubblescape <small>v3</small> · <span data-i18n="strata">Strata</span></h1>
+    <p data-i18n="tagline">Een gelaagde, overlappende kijk op Nederlandse TikTok-bubbels — output van een genest blokmodel.</p>
+  </div>
+  <div id="header-right">
+    <button class="hbtn active" id="view-strata" onclick="setView('strata')" data-i18n="viewStrata">Strata</button>
+    <button class="hbtn" id="view-coupling" onclick="setView('coupling')" data-i18n="viewCoupling">Koppeling</button>
+    <button class="hbtn" id="zoomout-btn" onclick="zoomOut()" data-i18n="zoomOut">↑ Zoom uit</button>
+    <button class="hbtn" id="contract-btn" onclick="openContract()" data-i18n="contractBtn">Datacontract</button>
+    <button class="hbtn" id="lang-btn" onclick="toggleLang()">EN</button>
+  </div>
+</div>
+
+<div id="breadcrumb"></div>
+
+<div id="strata">
+  <h2 data-i18n="strataTitle">De drie lagen</h2>
+  <div class="srow"><div class="sw sw-real"></div><div class="slbl"><b data-i18n="realT">De Real</b><span data-i18n="realD">het hele veld — alles wat bestaat</span></div></div>
+  <div class="srow"><div class="sw sw-actual"></div><div class="slbl"><b data-i18n="actualT">Het Actuele</b><span data-i18n="actualD">de bubbels die het model afleidt</span></div></div>
+  <div class="srow"><div class="sw sw-emp"></div><div class="slbl"><b data-i18n="empT">Het Empirische</b><span data-i18n="empD">losse accounts — wat we waarnemen</span></div></div>
+  <div id="honesty">
+    <span data-i18n="honesty1">Deze tool meet <b>wie wát plaatst — niet wie wát ziet.</b> Het zijn content-<i>producenten</i>, geen kijkers.</span>
+    <div style="margin-top:7px" class="hint" data-i18n="honesty2">Grijze, vage stippen buiten de bubbels = "dit weten we niet" — te zwakke binding om toe te wijzen.</div>
+  </div>
+</div>
+
+<div id="panel">
+  <button id="panel-close" onclick="closePanel()">×</button>
+  <div id="panel-body"></div>
+</div>
+
+<div id="contract">
+  <div id="contract-inner">
+    <button id="contract-close" onclick="closeContract()">×</button>
+    <h2 data-i18n="contractTitle">Datacontract voor het modelteam</h2>
+    <p class="sub" data-i18n="contractSub">De exacte JSON-vorm die het geneste blokmodel moet produceren. Volledige uitleg: v3/STRATA_DATA_CONTRACT.md</p>
+    <pre id="contract-pre"></pre>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+"use strict";
+// ════════════════════════════════════════════════════════════════════════════
+//  Bubblescape v3 — Strata view
+//  Self-contained. No build step, no external libraries. Renders the data
+//  contract documented in v3/STRATA_DATA_CONTRACT.md against a mock fixture.
+// ════════════════════════════════════════════════════════════════════════════
+
+const SVGNS = "http://www.w3.org/2000/svg";
+
+// ── deterministic PRNG (so layout/mock are stable across reloads) ───────────
+function hashStr(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function rng(seed){ let a=seed>>>0; return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MOCK FIXTURE  — conforms exactly to the data contract.
+//  Replace loadData() with a fetch of real model output to go live.
+// ════════════════════════════════════════════════════════════════════════════
+function buildMock(){
+  // account-blocks: macro (level 0) -> sub (level 1)
+  const blockDefs = [
+    // macro green — everyday NL
+    { id:"a", level:0, parent:null, label:{en:"Mainstream Dutch TikTok", nl:"Gewoon Nederlands TikTok"},
+      regime:["grappig","voorjou","nederland"], reach:24200000, persistence:0.88 },
+    { id:"a1", level:1, parent:"a", label:{en:"Humor & memes", nl:"Humor & memes"},
+      regime:["grappig","bankzitters","herkenbaar"], reach:9100000, persistence:0.81 },
+    { id:"a2", level:1, parent:"a", label:{en:"Lifestyle & cleaning", nl:"Lifestyle & schoonmaken"},
+      regime:["schoonmaken","cleantok","recept"], reach:6400000, persistence:0.24 }, // momentary trend
+    // macro purple — politics
+    { id:"b", level:0, parent:null, label:{en:"Politically engaged NL", nl:"Politiek betrokken NL"},
+      regime:["politiek","tweedekamer","debat"], reach:11800000, persistence:0.9 },
+    { id:"b1", level:1, parent:"b", label:{en:"Right-populist", nl:"Rechts-populistisch"},
+      regime:["pvv","fvd","migratie"], reach:5200000, persistence:0.92 },
+    { id:"b2", level:1, parent:"b", label:{en:"Left activism", nl:"Links activisme"},
+      regime:["groenlinks","klimaat","palestina"], reach:3900000, persistence:0.7 },
+    // macro orange — established media
+    { id:"c", level:0, parent:null, label:{en:"Established media", nl:"Gevestigde media"},
+      regime:["nieuws","nos","omroep"], reach:8700000, persistence:0.86 },
+    { id:"c1", level:1, parent:"c", label:{en:"News & broadcasters", nl:"Nieuws & omroepen"},
+      regime:["nieuws","nos","actueel"], reach:5100000, persistence:0.88 },
+    { id:"c2", level:1, parent:"c", label:{en:"Football", nl:"Voetbal"},
+      regime:["voetbal","eredivisie","oranje"], reach:3300000, persistence:0.55 },
+  ];
+
+  // content-blocks (right column of the coupling view)
+  const contentDefs = [
+    { id:"h_humor",  label:{en:"#grappig sphere",   nl:"#grappig-sfeer"},   regime:["grappig","lachen","bankzitters"] },
+    { id:"h_life",   label:{en:"#schoonmaken sphere",nl:"#schoonmaken-sfeer"},regime:["schoonmaken","cleantok","koken"] },
+    { id:"h_pol",    label:{en:"#politiek sphere",   nl:"#politiek-sfeer"},   regime:["politiek","tweedekamer","pvv"] },
+    { id:"h_news",   label:{en:"#nieuws sphere",     nl:"#nieuws-sfeer"},     regime:["nieuws","nos","actueel"] },
+    { id:"h_sport",  label:{en:"#voetbal sphere",    nl:"#voetbal-sfeer"},    regime:["voetbal","eredivisie","sport"] },
+  ];
+
+  const couplings = [
+    { account_block_id:"a1", content_block_id:"h_humor", weight:0.92 },
+    { account_block_id:"a2", content_block_id:"h_life",  weight:0.88 },
+    { account_block_id:"a1", content_block_id:"h_life",  weight:0.30 },
+    { account_block_id:"b1", content_block_id:"h_pol",   weight:0.86 },
+    { account_block_id:"b2", content_block_id:"h_pol",   weight:0.64 },
+    { account_block_id:"b2", content_block_id:"h_news",  weight:0.34 },
+    { account_block_id:"c1", content_block_id:"h_news",  weight:0.90 },
+    { account_block_id:"c2", content_block_id:"h_sport", weight:0.91 },
+    { account_block_id:"a1", content_block_id:"h_sport", weight:0.22 },
+  ];
+
+  // explicit bridges (shared accounts in the overlap "lens")
+  const overlaps = [
+    { between:["a1","b1"], shared_accounts:["patrickkicken","boze_henk"] },
+    { between:["b2","c1"], shared_accounts:["klimaatjuf"] },
+    { between:["c2","a1"], shared_accounts:["voetbalgrap"] },
+    { between:["b1","c2"], shared_accounts:["oranjehooligan"] },
+  ];
+
+  // ── build members + accounts map ─────────────────────────────────────────
+  const members = {};   // blockId -> [{account,membership}]
+  blockDefs.forEach(b=>members[b.id]=[]);
+  const accounts = {};
+  const SOUNDS = ["origineel geluid","Hardstyle remix","Nederlandse rap","nieuws-jingle","stadion-koor","viral dans-audio"];
+
+  function ensureAccount(name, regime, rnd){
+    if(accounts[name]) return;
+    const hh = (regime||[]).slice(0,3);
+    const extra = ["nederland","fyp","tiktok","viral"][Math.floor(rnd()*4)];
+    accounts[name] = {
+      followers: Math.floor(800 + Math.pow(rnd(),3)*900000),
+      verified: rnd()<0.07,
+      top_hashtags: [...new Set([...hh, extra])],
+      top_sounds: rnd()<0.18 ? null : [SOUNDS[Math.floor(rnd()*SOUNDS.length)], SOUNDS[Math.floor(rnd()*SOUNDS.length)]],
+    };
+  }
+
+  const subBlocks = blockDefs.filter(b=>b.level===1);
+  // 1. core members — dense, single-block accounts
+  subBlocks.forEach(b=>{
+    const rnd = rng(hashStr("core"+b.id));
+    const n = 9 + Math.floor(rnd()*5);
+    for(let i=0;i<n;i++){
+      const name = b.id + "_core" + i;
+      ensureAccount(name, b.regime, rnd);
+      members[b.id].push({ account:name, membership: +(0.7 + rnd()*0.28).toFixed(2) });
+    }
+    // a few weak / "I don't know" members (max membership < 0.3)
+    const m = 2 + Math.floor(rnd()*3);
+    for(let i=0;i<m;i++){
+      const name = b.id + "_weak" + i;
+      ensureAccount(name, b.regime, rnd);
+      members[b.id].push({ account:name, membership: +(0.10 + rnd()*0.16).toFixed(2) });
+    }
+  });
+  // 2. bridge members from overlaps — split across two sub-blocks
+  overlaps.forEach((ov,oi)=>{
+    const [x,y] = ov.between;
+    if(!members[x]||!members[y]) return; // skip overlaps that reference macro-only? both are sub here
+    ov.shared_accounts.forEach((name,i)=>{
+      const rnd = rng(hashStr("bridge"+name));
+      const reg = [...(blockDefs.find(b=>b.id===x).regime), ...(blockDefs.find(b=>b.id===y).regime)];
+      ensureAccount(name, reg, rnd);
+      const m1 = 0.42 + rnd()*0.16, m2 = 0.40 + rnd()*0.16;
+      members[x].push({ account:name, membership:+m1.toFixed(2) });
+      members[y].push({ account:name, membership:+m2.toFixed(2) });
+    });
+  });
+  // 3. propagate membership up to macro parents (max of children memberships)
+  blockDefs.filter(b=>b.level===0).forEach(macro=>{
+    const kids = subBlocks.filter(s=>s.parent===macro.id);
+    const agg = {};
+    kids.forEach(k=>members[k.id].forEach(({account,membership})=>{ agg[account]=Math.max(agg[account]||0, membership); }));
+    members[macro.id] = Object.entries(agg).map(([account,membership])=>({account,membership:+membership.toFixed(2)}));
+  });
+  // a few "pure unknown" accounts: weak membership in a macro only — float in the field
+  blockDefs.filter(b=>b.level===0).forEach(macro=>{
+    const rnd = rng(hashStr("unknown"+macro.id));
+    for(let i=0;i<4;i++){
+      const name = macro.id+"_unk"+i;
+      ensureAccount(name, macro.regime, rnd);
+      members[macro.id].push({ account:name, membership:+(0.08+rnd()*0.14).toFixed(2) });
+    }
+  });
+
+  const blocks = [
+    ...blockDefs.map(b=>({ id:b.id, level:b.level, parent:b.parent, kind:"account",
+      label:b.label, content_regime:b.regime, reach:b.reach, persistence:b.persistence,
+      members: members[b.id] })),
+    ...contentDefs.map(c=>({ id:c.id, level:0, parent:null, kind:"content",
+      label:c.label, content_regime:c.regime, reach:null, persistence:null, members:[] })),
+  ];
+
+  return { recommended_level:1, blocks, couplings, overlaps, accounts };
+}
+
+async function loadData(){
+  // To go live: return await (await fetch('/data/strata.json')).json();
+  return buildMock();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Colour — a pure function of content_regime (never random)
+// ════════════════════════════════════════════════════════════════════════════
+const REGIME_COLORS = {
+  grappig:"#1D9E75", lachen:"#1D9E75", bankzitters:"#1D9E75", herkenbaar:"#1D9E75", voorjou:"#1D9E75", nederland:"#1D9E75",
+  schoonmaken:"#7BB661", cleantok:"#7BB661", recept:"#7BB661", koken:"#7BB661",
+  politiek:"#5B4FCF", tweedekamer:"#5B4FCF", debat:"#5B4FCF",
+  pvv:"#7A4FCF", fvd:"#7A4FCF", migratie:"#7A4FCF",
+  groenlinks:"#3E8EDE", klimaat:"#3E8EDE", palestina:"#3E8EDE",
+  nieuws:"#D97B2C", nos:"#D97B2C", omroep:"#D97B2C", actueel:"#D97B2C",
+  voetbal:"#C94040", eredivisie:"#C94040", oranje:"#C94040", sport:"#C94040",
+};
+function regimeColor(regime){
+  if(!regime || !regime.length) return "#5a5a5a"; // unknown regime -> grey
+  const key = regime[0];
+  if(REGIME_COLORS[key]) return REGIME_COLORS[key];
+  for(const t of regime) if(REGIME_COLORS[t]) return REGIME_COLORS[t];
+  const h = hashStr(key)%360; return `hsl(${h},55%,55%)`;
+}
+function hexA(hex,a){
+  if(hex.startsWith("hsl")) return hex.replace("hsl","hsla").replace(")",`,${a})`);
+  const n=parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  i18n
+// ════════════════════════════════════════════════════════════════════════════
+const LANG = {
+  nl:{
+    strata:"Strata", tagline:"Een gelaagde, overlappende kijk op Nederlandse TikTok-bubbels — output van een genest blokmodel.",
+    viewStrata:"Strata", viewCoupling:"Koppeling", zoomOut:"↑ Zoom uit", contractBtn:"Datacontract",
+    strataTitle:"De drie lagen", realT:"De Real", realD:"het hele veld — alles wat bestaat",
+    actualT:"Het Actuele", actualD:"de bubbels die het model afleidt",
+    empT:"Het Empirische", empD:"losse accounts — wat we waarnemen",
+    honesty2:"Grijze, vage stippen buiten de bubbels = \"dit weten we niet\" — te zwakke binding om toe te wijzen.",
+    fieldCrumb:"Het veld", recTag:"aanbevolen niveau", clickHint:"klik om in te zoomen",
+    accounts:"accounts", account:"account", followers:"volgers", verified:"geverifieerd",
+    topHashtags:"Top hashtags", topSounds:"Top geluiden", membershipProfile:"Lidmaatschapsprofiel",
+    unknownSound:"onbekend — geen geluiddata", bridgeBadge:"BRIDGE-ACCOUNT — verdeeld over bubbels",
+    panelKicker:"Empirisch · waargenomen account", momentary:"vluchtig (lage persistentie)",
+    couplingTitle:"De bubbel ís de koppeling", couplingSub:"Account-blokken (links) gekoppeld aan content-blokken (rechts). De band is de bubbel.",
+    accountBlocks:"Account-blokken", contentBlocks:"Content-blokken", coupling:"koppeling", weight:"gewicht",
+    contractTitle:"Datacontract voor het modelteam", contractSub:"De exacte JSON-vorm die het geneste blokmodel moet produceren. Volledige uitleg: v3/STRATA_DATA_CONTRACT.md",
+    persistence:"persistentie", reach:"bereik", regime:"content-regime", unknown:"onbekend",
+    bridgeLens:"bridge-accounts in de overlap", spread:"verdeeld over",
+  },
+  en:{
+    strata:"Strata", tagline:"A stratified, overlapping view of Dutch TikTok bubbles — output of a nested block model.",
+    viewStrata:"Strata", viewCoupling:"Coupling", zoomOut:"↑ Zoom out", contractBtn:"Data contract",
+    strataTitle:"The three layers", realT:"The Real", realD:"the whole field — everything that exists",
+    actualT:"The Actual", actualD:"the bubbles the model infers",
+    empT:"The Empirical", empD:"individual accounts — what we observe",
+    honesty2:"Faint grey dots outside the bubbles = \"we don't know\" — binding too weak to assign.",
+    fieldCrumb:"The field", recTag:"recommended level", clickHint:"click to zoom in",
+    accounts:"accounts", account:"account", followers:"followers", verified:"verified",
+    topHashtags:"Top hashtags", topSounds:"Top sounds", membershipProfile:"Membership profile",
+    unknownSound:"unknown — no sound data", bridgeBadge:"BRIDGE ACCOUNT — split across bubbles",
+    panelKicker:"Empirical · observed account", momentary:"momentary (low persistence)",
+    couplingTitle:"The bubble IS the coupling", couplingSub:"Account-blocks (left) coupled to content-blocks (right). The band is the bubble.",
+    accountBlocks:"Account-blocks", contentBlocks:"Content-blocks", coupling:"coupling", weight:"weight",
+    contractTitle:"Data contract for the model team", contractSub:"The exact JSON shape the nested block model must produce. Full spec: v3/STRATA_DATA_CONTRACT.md",
+    persistence:"persistence", reach:"reach", regime:"content regime", unknown:"unknown",
+    bridgeLens:"bridge accounts in the overlap", spread:"split across",
+  }
+};
+let currentLang = "nl";
+function t(k){ return LANG[currentLang][k] ?? LANG.nl[k] ?? k; }
+function lbl(label){ if(label==null) return ""; return typeof label==="string" ? label : (label[currentLang]||label.en||label.nl||""); }
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.innerHTML = t(el.getAttribute("data-i18n")); });
+  document.getElementById("lang-btn").textContent = currentLang==="nl" ? "EN" : "NL";
+  document.documentElement.lang = currentLang;
+  // honesty1 contains html, re-render manually
+  const h1 = document.querySelector('[data-i18n="honesty1"]');
+}
+// honesty1 has inline html -> store separately
+LANG.nl.honesty1 = 'Deze tool meet <b>wie wát plaatst — niet wie wát ziet.</b> Het zijn content-<i>producenten</i>, geen kijkers.';
+LANG.en.honesty1 = 'This tool maps <b>who posts what — not who sees what.</b> These are content <i>producers</i>, not viewers.';
+
+function toggleLang(){ currentLang = currentLang==="nl"?"en":"nl"; applyI18n(); render(); }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  State
+// ════════════════════════════════════════════════════════════════════════════
+let DATA = null;
+let view = "strata";              // "strata" | "coupling"
+let stack = [];                   // navigation frames
+let lastCenters = {};             // blockId -> {x,y} from previous frame (for spread-in)
+const svg = document.getElementById("svg");
+const tooltip = document.getElementById("tooltip");
+
+function curFrame(){ return stack[stack.length-1]; }
+function blockById(id){ return DATA.blocks.find(b=>b.id===id); }
+function accountBlocks(){ return DATA.blocks.filter(b=>b.kind==="account"); }
+function childrenOf(id){ return accountBlocks().filter(b=>b.parent===id); }
+function hasChildren(id){ return childrenOf(id).length>0; }
+
+// dominant + spread of an account across a set of blocks
+function membershipsFor(account, blocks){
+  const ms=[];
+  blocks.forEach(b=>{ const m=b.members.find(x=>x.account===account); if(m) ms.push({block:b, m:m.membership}); });
+  ms.sort((a,b)=>b.m-a.m);
+  const sum = ms.reduce((s,x)=>s+x.m,0);
+  return { ms, sum, top: ms[0]?ms[0].m:0, conc: sum>0?(ms[0].m/sum):0 };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Layout — deterministic positions for a set of blocks
+// ════════════════════════════════════════════════════════════════════════════
+function W(){ return svg.clientWidth; }
+function H(){ return svg.clientHeight; }
+
+function layoutRegions(blocks){
+  const w=W(), h=H(), cx=w/2, cy=h/2;
+  const R = Math.min(w,h)*0.30;             // ring radius for placing centres
+  const pos = {};
+  const n = blocks.length;
+  const maxReach = Math.max(...blocks.map(b=>b.reach||1));
+  blocks.forEach((b,i)=>{
+    const ang = -Math.PI/2 + (i/n)*Math.PI*2;
+    // jitter centres a touch so they don't sit on a perfect circle
+    const jr = rng(hashStr(b.id))()*0.12;
+    const rr = R*(0.78+jr);
+    pos[b.id] = {
+      x: cx + Math.cos(ang)*rr * (n>1?1:0),
+      y: cy + Math.sin(ang)*rr * (n>1?1:0),
+      r: 60 + 95*Math.sqrt((b.reach||1)/maxReach),
+    };
+  });
+  // pull explicit-overlap pairs together so their regions actually intersect
+  const idset = new Set(blocks.map(b=>b.id));
+  DATA.overlaps.forEach(ov=>{
+    const [x,y]=ov.between;
+    if(idset.has(x)&&idset.has(y)){
+      const a=pos[x], b=pos[y];
+      const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+      a.x=a.x*0.62+mx*0.38; a.y=a.y*0.62+my*0.38;
+      b.x=b.x*0.62+mx*0.38; b.y=b.y*0.62+my*0.38;
+    }
+  });
+  return pos;
+}
+
+// leaf (account-level) layout: focus block big & centred, siblings faint at periphery
+function layoutLeaf(lb, sibs){
+  const w=W(), h=H(), cx=w/2, cy=h/2;
+  const pos={}; pos[lb.id]={ x:cx, y:cy, r:Math.min(w,h)*0.31 };
+  sibs.forEach((s,i)=>{
+    const ang=-Math.PI/2 + (i/Math.max(sibs.length,1))*Math.PI*2;
+    const rr=Math.min(w,h)*0.44;
+    pos[s.id]={ x:cx+Math.cos(ang)*rr, y:cy+Math.sin(ang)*rr, r:58 };
+  });
+  return pos;
+}
+// account position inside a leaf: radial by membership — dense at centre, frayed at edge
+function dotPositionLeaf(account, lb, sibs, pos){
+  const m = (lb.members.find(x=>x.account===account)||{membership:0}).membership;
+  const c = pos[lb.id], R=c.r;
+  const rnd = rng(hashStr(account+"leaf"));
+  let sibM=0, sibBlock=null;
+  sibs.forEach(s=>{ const e=s.members.find(x=>x.account===account); if(e&&e.m>sibM){ sibM=e.m; sibBlock=s; } });
+  const bridge = sibM>0.30;
+  let ang;
+  if(sibBlock){ const sp=pos[sibBlock.id]; ang=Math.atan2(sp.y-c.y, sp.x-c.x)+(rnd()-0.5)*0.5; }
+  else ang = rnd()*Math.PI*2;
+  const dist = R*(0.10 + (1-Math.min(m,1))*0.86);
+  const ms=[{block:lb,m}]; if(sibBlock) ms.push({block:sibBlock,m:sibM}); ms.sort((a,b)=>b.m-a.m);
+  return { x:c.x+Math.cos(ang)*dist, y:c.y+Math.sin(ang)*dist, conc:m, ms, unknown:false, bridge };
+}
+
+// account dot position from soft membership across visible blocks
+function dotPosition(account, blocks, pos){
+  const { ms, sum, conc } = membershipsFor(account, blocks);
+  const rnd = rng(hashStr(account));
+  if(sum===0 || ms[0].m<0.30 && ms.length<=1){
+    // "I don't know" — float faintly in the REAL field, outside the bubbles
+    const w=W(),h=H();
+    const ang=rnd()*Math.PI*2, rad=Math.min(w,h)*(0.40+rnd()*0.08);
+    return { x:w/2+Math.cos(ang)*rad, y:h/2+Math.sin(ang)*rad, conc:0, ms, unknown:true };
+  }
+  // membership-weighted centroid (split accounts sit between their bubbles)
+  let x=0,y=0;
+  ms.forEach(({block,m})=>{ const p=pos[block.id]; x+=p.x*(m/sum); y+=p.y*(m/sum); });
+  // fray: dense at centre (high conc), spread toward the boundary when split
+  const dom = pos[ms[0].block.id];
+  const fray = (1-conc);                     // 0 = pure, 0.5 = even split
+  const jr = dom.r*(0.22 + 0.55*fray);
+  const ja = rnd()*Math.PI*2, jd = jr*Math.sqrt(rnd());
+  x += Math.cos(ja)*jd; y += Math.sin(ja)*jd;
+  return { x, y, conc, ms, unknown:false };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SVG helpers
+// ════════════════════════════════════════════════════════════════════════════
+function el(name, attrs={}, parent=null){
+  const e=document.createElementNS(SVGNS,name);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  if(parent) parent.appendChild(e);
+  return e;
+}
+function clearSvg(){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
+function defsFilters(){
+  const defs=el("defs",{},svg);
+  const f=el("filter",{id:"soft", x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);
+  el("feGaussianBlur",{in:"SourceGraphic", stdDeviation:"14"},f);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  STRATA render
+// ════════════════════════════════════════════════════════════════════════════
+function visibleBlocksForFrame(f){
+  if(f.parent!==null && f.parent!==undefined) return childrenOf(f.parent);
+  return accountBlocks().filter(b=>b.level===f.level);
+}
+
+function render(){
+  if(view==="coupling"){ renderCoupling(); renderBreadcrumb(); return; }
+  clearSvg(); defsFilters();
+  const f = curFrame();
+  const w=W(), h=H();
+
+  // ── REAL: the whole field ──────────────────────────────────────────────
+  const fieldLayer=el("g",{},svg);
+  el("rect",{ x:14,y:14, width:w-28, height:h-28, rx:24, fill:"#ffffff04",
+    stroke:"#ffffff22", "stroke-width":1.4, "stroke-dasharray":"3 7" }, fieldLayer);
+  el("text",{ x:w-26, y:38, "text-anchor":"end", "font-size":10, "font-weight":700,
+    fill:"#ffffff30", "letter-spacing":"0.18em" }, fieldLayer).textContent = t("realT").toUpperCase()+" · "+t("realD");
+
+  const macroLayer=el("g",{},svg);   // faint parent containers (nesting)
+  const regionLayer=el("g",{},svg);  // ACTUAL bubbles
+  const labelLayer=el("g",{},svg);
+  const dotLayer=el("g",{},svg);     // EMPIRICAL dots
+
+  const leafMode = !!f.leaf;
+  let blocks, pos, focusBlock=null, sibs=[];
+  if(leafMode){
+    focusBlock = blockById(f.parent);
+    sibs = accountBlocks().filter(b=>b.parent===focusBlock.parent && b.id!==focusBlock.id);
+    blocks = [focusBlock];
+    pos = layoutLeaf(focusBlock, sibs);
+  } else {
+    blocks = visibleBlocksForFrame(f);
+    pos = layoutRegions(blocks);
+  }
+
+  if(leafMode){
+    // faint sibling regions for context (bridges fray toward them)
+    sibs.forEach(s=>{
+      const p=pos[s.id], col=regimeColor(s.content_regime);
+      el("circle",{ cx:p.x, cy:p.y, r:p.r, fill:hexA(col,0.05), stroke:hexA(col,0.3),
+        "stroke-width":1.1, "stroke-dasharray":"2 6" }, macroLayer);
+      el("text",{ x:p.x, y:Math.max(p.y-p.r-12,100), "text-anchor":"middle", "font-size":10,
+        "font-weight":600, fill:hexA(col,0.55), class:"rlabel" }, macroLayer).textContent = lbl(s.label);
+    });
+  } else {
+    // faint parent regions behind (Russian-doll nesting)
+    const parentIds=[...new Set(blocks.map(b=>b.parent).filter(p=>p!==null))];
+    parentIds.forEach(pid=>{
+      const kids=blocks.filter(b=>b.parent===pid);
+      let mx=0,my=0; kids.forEach(k=>{mx+=pos[k.id].x; my+=pos[k.id].y;}); mx/=kids.length; my/=kids.length;
+      let rad=0; kids.forEach(k=>{ rad=Math.max(rad, Math.hypot(pos[k.id].x-mx,pos[k.id].y-my)+pos[k.id].r); });
+      const pb=blockById(pid);
+      const col=regimeColor(pb.content_regime);
+      el("circle",{ cx:mx, cy:my, r:rad+26, fill:hexA(col,0.04), stroke:hexA(col,0.28),
+        "stroke-width":1.2, "stroke-dasharray":"2 6" }, macroLayer);
+      el("text",{ x:mx, y:Math.max(my-rad-34,100), "text-anchor":"middle", "font-size":10.5, "font-weight":700,
+        fill:hexA(col,0.6), class:"rlabel" }, macroLayer).textContent = lbl(pb.label);
+    });
+  }
+
+  // ── ACTUAL bubbles ─────────────────────────────────────────────────────
+  blocks.forEach(b=>{
+    const p=pos[b.id], col=regimeColor(b.content_regime);
+    const momentary = b.persistence!==null && b.persistence!==undefined && b.persistence<0.4;
+    const baseOp = momentary ? 0.55 : 1;
+    const origin = lastCenters[b.id] || lastCenters[b.parent] || {x:w/2,y:h/2};
+    const g=el("g",{ class:"region-grp grp-anim", style:`transform:translate(${origin.x}px,${origin.y}px)` }, regionLayer);
+    g.dataset.block=b.id;
+    el("circle",{ cx:0,cy:0, r:p.r, fill:hexA(col, momentary?0.07:0.13), filter:"url(#soft)", class:"region-fill" }, g);
+    const ring=el("circle",{ cx:0,cy:0, r:p.r, fill:"none", stroke:hexA(col, baseOp*0.5),
+      "stroke-width":1.4, class:"region-ring"+(momentary?" dim-momentary":"") }, g);
+    // labels (kept upright, animate with the group)
+    const lg=el("g",{ class:"grp-anim", style:`transform:translate(${origin.x}px,${origin.y}px)` }, labelLayer);
+    lg.dataset.block=b.id;
+    el("text",{ x:0,y:-6, "text-anchor":"middle", class:"rlabel rlabel-name", fill: momentary?hexA(col,0.7):"#fff" }, lg).textContent = lbl(b.label);
+    el("text",{ x:0,y:10, "text-anchor":"middle", class:"rlabel rlabel-regime", fill:hexA(col,0.85) }, lg)
+      .textContent = "#"+(b.content_regime[0]||t("unknown"));
+    el("text",{ x:0,y:26, "text-anchor":"middle", class:"rlabel rlabel-count", fill:"#888" }, lg)
+      .textContent = b.members.length+" "+t("accounts") + (leafMode ? "" : " · "+t("clickHint"));
+    if(momentary){
+      el("text",{ x:0,y:42, "text-anchor":"middle", class:"rlabel rlabel-count", fill:hexA(col,0.7) }, lg)
+        .textContent = "⚡ "+t("momentary");
+    }
+    if(!leafMode) g.addEventListener("click",(e)=>{ e.stopPropagation(); drillInto(b.id); });
+    g.addEventListener("mousemove",(e)=>showTip(e, regionTip(b)));
+    g.addEventListener("mouseleave",hideTip);
+  });
+
+  // ── EMPIRICAL dots ─────────────────────────────────────────────────────
+  // collect every account that is a member of any visible block
+  const seen=new Set(); const accs=[];
+  blocks.forEach(b=>b.members.forEach(m=>{ if(!seen.has(m.account)){ seen.add(m.account); accs.push(m.account); } }));
+  const bridges=[];
+  accs.forEach(name=>{
+    const dp = leafMode ? dotPositionLeaf(name, focusBlock, sibs, pos) : dotPosition(name, blocks, pos);
+    const meta=DATA.accounts[name]||{};
+    const dom = dp.ms[0] ? regimeColor(dp.ms[0].block.content_regime) : "#888";
+    const isBridge = dp.bridge || (!dp.unknown && dp.ms.length>=2 && (dp.ms[1].m/dp.ms[0].m)>0.55);
+    const r = dp.unknown ? 2 : (2.4 + 0.7*Math.log10((meta.followers||1000)));
+    const origin = (dp.ms[0]&&lastCenters[dp.ms[0].block.id]) || {x:w/2,y:h/2};
+    if(isBridge){ bridges.push({name,dp,meta,r}); return; }  // draw bridges on top
+    const op = dp.unknown ? 0.16 : (0.28 + 0.62*dp.conc);
+    const c=el("circle",{ class:"dot dot-hit grp-anim", r,
+      fill: dp.unknown? "#9a9a9a" : dom, "fill-opacity":op,
+      stroke: dp.unknown?"none":hexA(dom,0.9), "stroke-width": dp.unknown?0:0.5,
+      style:`transform:translate(${origin.x}px,${origin.y}px)` }, dotLayer);
+    c.dataset.tx=dp.x; c.dataset.ty=dp.y; c.dataset.acc=name;
+    c.addEventListener("click",(e)=>{ e.stopPropagation(); openAccount(name); });
+    c.addEventListener("mousemove",(e)=>showTip(e, dotTip(name,dp)));
+    c.addEventListener("mouseleave",hideTip);
+  });
+  // bridges last — amber, ringed, in the overlap lens
+  bridges.forEach(({name,dp,meta,r})=>{
+    const origin = (dp.ms[0]&&lastCenters[dp.ms[0].block.id]) || {x:w/2,y:h/2};
+    const g=el("g",{ class:"dot-hit grp-anim", style:`transform:translate(${origin.x}px,${origin.y}px)` }, dotLayer);
+    g.dataset.tx=dp.x; g.dataset.ty=dp.y; g.dataset.acc=name; g.dataset.bridge="1";
+    el("circle",{ cx:0,cy:0, r:r+3.5, fill:"none", stroke:hexA("#F5A623",0.55), "stroke-width":1 }, g);
+    el("circle",{ cx:0,cy:0, r:r+0.6, fill:"#F5A623", "fill-opacity":0.95, stroke:"#000", "stroke-width":0.6 }, g);
+    g.addEventListener("click",(e)=>{ e.stopPropagation(); openAccount(name); });
+    g.addEventListener("mousemove",(e)=>showTip(e, dotTip(name,dp)));
+    g.addEventListener("mouseleave",hideTip);
+  });
+
+  // background click zooms out one level
+  el("rect",{ x:0,y:0,width:w,height:h, fill:"transparent" }, fieldLayer)
+    .addEventListener("click",()=>{ if(stack.length>1 || curFrame().level>0) zoomOut(); });
+  // keep it behind interactive layers
+  fieldLayer.parentNode.insertBefore(fieldLayer, macroLayer);
+
+  // animate everything to its target on the next frame (spread-in / pop)
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    regionLayer.querySelectorAll(".region-grp").forEach(g=>{ const p=pos[g.dataset.block]; g.style.transform=`translate(${p.x}px,${p.y}px)`; });
+    labelLayer.querySelectorAll("g").forEach(g=>{ if(!g.dataset.block)return; const p=pos[g.dataset.block]; g.style.transform=`translate(${p.x}px,${p.y}px)`; });
+    dotLayer.querySelectorAll("[data-tx]").forEach(d=>{ d.style.transform=`translate(${d.dataset.tx}px,${d.dataset.ty}px)`; });
+  }));
+
+  // remember centres for the next transition
+  lastCenters={}; blocks.forEach(b=>lastCenters[b.id]={x:pos[b.id].x,y:pos[b.id].y});
+  renderBreadcrumb();
+}
+
+function regionTip(b){
+  const pers = (b.persistence==null) ? t("unknown") : (b.persistence*100|0)+"%";
+  const reach = (b.reach==null) ? t("unknown") : (b.reach>=1e6?(b.reach/1e6).toFixed(1)+"M":(b.reach/1e3|0)+"K");
+  return `<b style="color:#fff">${lbl(b.label)}</b><br>${t("regime")}: #${b.content_regime.join(" #")}<br>${t("reach")}: ${reach} · ${t("persistence")}: ${pers}`;
+}
+function dotTip(name,dp){
+  if(dp.unknown) return `<b style="color:#aaa">${name}</b><br><span class="hint">${t("honesty2").replace(/<[^>]+>/g,'')}</span>`;
+  const parts = dp.ms.slice(0,3).map(x=>`${lbl(x.block.label)} ${(x.m*100|0)}%`).join(" · ");
+  return `<b style="color:#fff">${name}</b><br>${t("spread")}: ${parts}`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Navigation
+// ════════════════════════════════════════════════════════════════════════════
+function drillInto(id){
+  const b=blockById(id);
+  if(hasChildren(id)) stack.push({ parent:id, level:b.level+1 });
+  else stack.push({ parent:id, level:b.level+1, leaf:true });
+  render();
+}
+function zoomOut(){
+  const f=curFrame();
+  if(stack.length>1){ stack.pop(); }
+  else if(f.level>0){ stack[0]={ parent:null, level:f.level-1 }; }
+  render();
+}
+function renderBreadcrumb(){
+  const bc=document.getElementById("breadcrumb"); bc.innerHTML="";
+  const f=curFrame();
+  // build ancestor chain from f.parent up
+  const chain=[];
+  if(f.parent!=null){ let p=f.parent; while(p!=null){ const b=blockById(p); chain.unshift(b); p=b.parent; } }
+  const addCrumb=(text,active,onClick,tag)=>{
+    if(bc.children.length){ const s=document.createElement("span"); s.className="crumb-sep"; s.textContent="›"; bc.appendChild(s); }
+    const c=document.createElement("span"); c.className="crumb"+(active?" active":""); c.textContent=text;
+    if(onClick&&!active) c.onclick=onClick; bc.appendChild(c);
+    if(tag){ const tg=document.createElement("span"); tg.className="crumb-tag"; tg.textContent=tag; bc.appendChild(tg); }
+  };
+  addCrumb(t("fieldCrumb"), f.parent==null && f.level===0, ()=>{ stack=[{parent:null,level:0}]; render(); });
+  if(f.parent==null){
+    if(f.level>0){
+      // recommended-level slice: a single tag chip, no duplicate crumb text
+      const tg=document.createElement("span"); tg.className="crumb-tag";
+      tg.textContent=t("recTag")+" · "+t("strata")+" L"+f.level; bc.appendChild(tg);
+    }
+  } else {
+    chain.forEach((b,i)=>{
+      const isLast = i===chain.length-1;
+      addCrumb(lbl(b.label), isLast, ()=>{ // navigate to a frame focused on this block's children
+        const idx = stack.findIndex(fr=>fr.parent===b.id);
+        if(idx>=0){ stack=stack.slice(0,idx+1); } render();
+      });
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Account detail panel
+// ════════════════════════════════════════════════════════════════════════════
+function openAccount(name){
+  const meta=DATA.accounts[name]||{};
+  const profile = membershipsFor(name, accountBlocks().filter(b=>b.level>=0));
+  // use leaf-most (highest level) blocks for a clean profile
+  const leaf = accountBlocks().filter(b=>!hasChildren(b.id));
+  const lp = membershipsFor(name, leaf);
+  const isBridge = lp.ms.length>=2 && (lp.ms[1].m/lp.ms[0].m)>0.55;
+  const fmt=n=> n==null?t("unknown"): (n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":n);
+  let html = `<div class="p-kicker">${t("panelKicker")}</div>`;
+  html += `<div class="p-name">@${name}${meta.verified?'<span class="p-verified">✔</span>':''}</div>`;
+  html += `<div class="p-sub">${fmt(meta.followers)} ${t("followers")}</div>`;
+  if(isBridge) html += `<div class="badge-bridge">◆ ${t("bridgeBadge")}</div>`;
+
+  html += `<div class="p-section"><div class="p-section-title">${t("topHashtags")}</div>`;
+  html += (meta.top_hashtags&&meta.top_hashtags.length)
+    ? `<div class="tag-list">${meta.top_hashtags.map(h=>`<span class="tag">#${h}</span>`).join("")}</div>`
+    : `<div class="unknown">${t("unknown")}</div>`;
+  html += `</div>`;
+
+  html += `<div class="p-section"><div class="p-section-title">${t("topSounds")}</div>`;
+  html += (meta.top_sounds && meta.top_sounds.length)
+    ? `<div class="tag-list">${meta.top_sounds.map(s=>`<span class="tag">♪ ${s}</span>`).join("")}</div>`
+    : `<div class="unknown">${t("unknownSound")}</div>`;
+  html += `</div>`;
+
+  html += `<div class="p-section"><div class="p-section-title">${t("membershipProfile")}</div>`;
+  if(lp.ms.length){
+    lp.ms.forEach(({block,m})=>{
+      const col=regimeColor(block.content_regime);
+      html += `<div class="mrow"><div class="mrow-head"><b>${lbl(block.label)}</b><span>${(m*100|0)}%</span></div>
+        <div class="mbar-bg"><div class="mbar" style="width:${(m*100)|0}%;background:${col}"></div></div></div>`;
+    });
+  } else { html += `<div class="unknown">${t("unknown")}</div>`; }
+  html += `</div>`;
+
+  document.getElementById("panel-body").innerHTML=html;
+  document.getElementById("panel").classList.add("open");
+}
+function closePanel(){ document.getElementById("panel").classList.remove("open"); }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Coupling (bipartite) view — the bubble IS the coupling
+// ════════════════════════════════════════════════════════════════════════════
+function renderCoupling(){
+  clearSvg(); defsFilters();
+  const w=W(), h=H();
+  const accBlocks = accountBlocks().filter(b=>b.level===0).concat(accountBlocks().filter(b=>b.level===1));
+  // show level-1 account blocks (the operative ones) on the left
+  const left = accountBlocks().filter(b=>b.level===1);
+  const right = DATA.blocks.filter(b=>b.kind==="content");
+  const topPad=120, botPad=70, lx=w*0.30, rx=w*0.70;
+  const lh=(h-topPad-botPad), rh=(h-topPad-botPad);
+  const lpos={}, rpos={};
+  left.forEach((b,i)=>{ lpos[b.id]={ x:lx, y:topPad + lh*(i+0.5)/left.length }; });
+  right.forEach((b,i)=>{ rpos[b.id]={ y:topPad + rh*(i+0.5)/right.length, x:rx }; });
+
+  // title
+  el("text",{ x:w/2, y:56, "text-anchor":"middle", "font-size":15, "font-weight":800, fill:"#fff" }, svg).textContent=t("couplingTitle");
+  el("text",{ x:w/2, y:78, "text-anchor":"middle", "font-size":11.5, fill:"#777" }, svg).textContent=t("couplingSub");
+  el("text",{ x:lx, y:topPad-26, "text-anchor":"middle", "font-size":10, "font-weight":800, fill:"#666", "letter-spacing":"0.12em" }, svg).textContent=t("accountBlocks").toUpperCase();
+  el("text",{ x:rx, y:topPad-26, "text-anchor":"middle", "font-size":10, "font-weight":800, fill:"#666", "letter-spacing":"0.12em" }, svg).textContent=t("contentBlocks").toUpperCase();
+
+  const bandLayer=el("g",{},svg), nodeLayer=el("g",{},svg);
+  // couplings -> bands (the bubble is the band)
+  DATA.couplings.forEach(cp=>{
+    const a=lpos[cp.account_block_id], b=rpos[cp.content_block_id];
+    if(!a||!b) return;
+    const ab=blockById(cp.account_block_id);
+    const col=regimeColor(ab.content_regime);
+    const th=2 + cp.weight*22;
+    const mx=(a.x+b.x)/2;
+    const d=`M ${a.x+14} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x-14} ${b.y}`;
+    const path=el("path",{ d, fill:"none", stroke:col, "stroke-width":th, "stroke-opacity":0.18+cp.weight*0.4, "stroke-linecap":"round", style:"cursor:pointer;transition:stroke-opacity .15s" }, bandLayer);
+    path.addEventListener("mouseenter",()=>path.setAttribute("stroke-opacity", Math.min(0.95,0.4+cp.weight*0.5)));
+    path.addEventListener("mouseleave",()=>path.setAttribute("stroke-opacity", 0.18+cp.weight*0.4));
+    path.addEventListener("mousemove",(e)=>showTip(e, `<b style="color:#fff">${lbl(ab.label)} ↔ ${lbl(blockById(cp.content_block_id).label)}</b><br>${t("weight")}: ${(cp.weight*100|0)}%`));
+    path.addEventListener("mouseleave",hideTip);
+  });
+  // nodes
+  left.forEach(b=>{
+    const p=lpos[b.id], col=regimeColor(b.content_regime);
+    const g=el("g",{ style:"cursor:pointer" }, nodeLayer);
+    el("rect",{ x:p.x-150, y:p.y-15, width:150, height:30, rx:8, fill:hexA(col,0.14), stroke:hexA(col,0.6), "stroke-width":1.2 }, g);
+    el("text",{ x:p.x-14, y:p.y+4, "text-anchor":"end", "font-size":12, "font-weight":700, fill:"#fff" }, g).textContent=lbl(b.label);
+    g.addEventListener("click",()=>{ view="strata"; setViewButtons(); stack=[{parent:b.parent,level:b.level}]; render(); });
+  });
+  right.forEach(b=>{
+    const p=rpos[b.id], col=regimeColor(b.content_regime);
+    const g=el("g",{}, nodeLayer);
+    el("rect",{ x:p.x, y:p.y-15, width:160, height:30, rx:8, fill:hexA(col,0.14), stroke:hexA(col,0.6), "stroke-width":1.2 }, g);
+    el("text",{ x:p.x+14, y:p.y+4, "text-anchor":"start", "font-size":12, "font-weight":700, fill:"#fff" }, g).textContent=lbl(b.label);
+  });
+  // honesty footer
+  el("text",{ x:w/2, y:h-34, "text-anchor":"middle", "font-size":11, fill:"#888" }, svg)
+    .textContent = currentLang==="nl" ? "De band tussen account- en content-blok ís de bubbel — de koppeling zelf." : "The band between an account- and content-block IS the bubble — the coupling itself.";
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  View toggle
+// ════════════════════════════════════════════════════════════════════════════
+function setView(v){ view=v; setViewButtons(); if(v==="coupling"){ renderCoupling(); } else { render(); } }
+function setViewButtons(){
+  document.getElementById("view-strata").classList.toggle("active", view==="strata");
+  document.getElementById("view-coupling").classList.toggle("active", view==="coupling");
+  document.getElementById("zoomout-btn").style.display = view==="strata" ? "" : "none";
+  document.getElementById("breadcrumb").style.display = view==="strata" ? "" : "none";
+}
+
+// ── tooltip ─────────────────────────────────────────────────────────────────
+function showTip(e,html){ tooltip.innerHTML=html; tooltip.style.opacity=1; tooltip.style.left=(e.clientX+14)+"px"; tooltip.style.top=(e.clientY+14)+"px"; }
+function hideTip(){ tooltip.style.opacity=0; }
+
+// ── contract panel ────────────────────────────────────────────────────────────
+function openContract(){
+  const pre=document.getElementById("contract-pre");
+  pre.innerHTML =
+`{
+  <span class="k">"recommended_level"</span>: 1,           <span class="c">// viz defaults to this scale</span>
+  <span class="k">"blocks"</span>: [
+    { <span class="k">"id"</span>, <span class="k">"level"</span>, <span class="k">"parent"</span>,
+      <span class="k">"kind"</span>: <span class="k">"account"</span>|<span class="k">"content"</span>,  <span class="c">// account-blocks are the bubbles</span>
+      <span class="k">"label"</span>, <span class="k">"content_regime"</span>: [tags],   <span class="c">// regime drives colour</span>
+      <span class="k">"reach"</span>, <span class="k">"persistence"</span>: 0..1|null,    <span class="c">// low -> dimmed/dashed</span>
+      <span class="k">"members"</span>: [ { <span class="k">"account"</span>, <span class="k">"membership"</span>: 0..1 } ] <span class="c">// soft, overlap allowed</span>
+    }
+  ],
+  <span class="k">"couplings"</span>: [ { <span class="k">"account_block_id"</span>, <span class="k">"content_block_id"</span>, <span class="k">"weight"</span> } ],
+  <span class="k">"overlaps"</span>:  [ { <span class="k">"between"</span>: [id,id], <span class="k">"shared_accounts"</span>: [usernames] } ],
+  <span class="k">"accounts"</span>:  { <span class="k">"&lt;username&gt;"</span>: { <span class="k">"followers"</span>, <span class="k">"verified"</span>, <span class="k">"top_hashtags"</span>, <span class="k">"top_sounds"</span> } }
+}`;
+  document.getElementById("contract").classList.add("open");
+}
+function closeContract(){ document.getElementById("contract").classList.remove("open"); }
+
+// ── boot ──────────────────────────────────────────────────────────────────────
+async function boot(){
+  DATA = await loadData();
+  stack = [{ parent:null, level: DATA.recommended_level }];   // land at the recommended scale
+  applyI18n();
+  setViewButtons();
+  render();
+}
+let _rt; window.addEventListener("resize", ()=>{ clearTimeout(_rt); _rt=setTimeout(()=>{ lastCenters={}; if(view==="coupling") renderCoupling(); else render(); },180); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closePanel(); closeContract(); } });
+boot();
+</script>
+</body>
+</html>
