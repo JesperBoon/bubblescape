@@ -74,6 +74,20 @@ def setup():
             accounts_collected INTEGER DEFAULT 0,
             notes              TEXT
         );
+
+        -- Per-video speech transcripts (KonbiniAPI ASR). One row per probed video:
+        -- status 'ok' carries the flattened text; 'no_asr'/'error' are kept so a video
+        -- is never re-probed (each probe costs a credit). credit_cost is the measured cost.
+        CREATE TABLE IF NOT EXISTS transcripts (
+            video_id    TEXT PRIMARY KEY,
+            lang        TEXT,               -- language reported for the transcript (e.g. nl-NL)
+            text        TEXT,               -- VTT flattened to plain text (NULL when none)
+            source      TEXT,               -- e.g. "ASR"
+            status      TEXT NOT NULL,      -- 'ok' | 'no_asr' | 'error'
+            credit_cost INTEGER,            -- credits this call actually cost (from headers)
+            fetched_at  TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_transcripts_status ON transcripts(status);
     """)
     conn.commit()
     # Migrations for existing DBs
@@ -164,6 +178,30 @@ def upsert_video(data: dict):
         data.get("views", 0),
         data.get("create_time"),
         data.get("language"),
+        datetime.utcnow().isoformat(),
+    ))
+    conn.commit()
+    conn.close()
+
+
+def upsert_transcript(video_id: str, result: dict):
+    """
+    Store one transcript probe. `result` is the dict returned by
+    KonbiniClient.get_video_transcript(): {status, lang, text, source, credit_cost}.
+    INSERT OR REPLACE keeps the table idempotent — a re-probe overwrites in place.
+    """
+    conn = get_conn()
+    conn.execute("""
+        INSERT OR REPLACE INTO transcripts
+            (video_id, lang, text, source, status, credit_cost, fetched_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        video_id,
+        result.get("lang"),
+        result.get("text"),
+        result.get("source"),
+        result["status"],
+        result.get("credit_cost"),
         datetime.utcnow().isoformat(),
     ))
     conn.commit()

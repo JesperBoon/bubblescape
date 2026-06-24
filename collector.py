@@ -196,8 +196,65 @@ class KonbiniClient:
             logger.error("Health check failed — check your API key.")
             return False
 
+    def get_video_transcript(self, video_id: str, language: str = "original") -> dict:
+        """
+        Fetch a video's speech transcript (WebVTT) and flatten it to plain text.
+
+        Unlike _get(), this surfaces the status so callers can cache misses: a video
+        with no auto-transcript returns 404, which still costs a credit, so we record it
+        as 'no_asr' and never re-probe. `language="original"` returns native ASR.
+
+        Returns: {status: 'ok'|'no_asr'|'error', lang, text, source, credit_cost}
+        """
+        time.sleep(random.uniform(0.5, 2.0))  # polite pacing — same as the scraper
+        url = f"{KONBINI_BASE_URL}/tiktok/videos/{video_id}/transcripts/{language}"
+        none = {"lang": None, "text": None, "source": None}
+        try:
+            resp = self.session.get(url, timeout=20)
+        except requests.Timeout:
+            logger.warning(f"Transcript timeout: {video_id}")
+            return {"status": "error", "credit_cost": 0, **none}
+        except requests.RequestException as e:
+            logger.error(f"Transcript request error on {video_id}: {e}")
+            return {"status": "error", "credit_cost": 0, **none}
+
+        cost = int(resp.headers.get("X-Credits-Used", 0) or 0)
+        self.credits_used += cost
+        remaining = resp.headers.get("X-Credits-Remaining")
+        if remaining is not None:
+            self.credits_remaining = int(remaining)
+
+        if resp.status_code == 200:
+            data = (resp.json() or {}).get("data", {}) or {}
+            text = vtt_to_text(data.get("content", "") or "")
+            if text:
+                return {"status": "ok", "lang": data.get("language"),
+                        "text": text, "source": data.get("source"), "credit_cost": cost}
+            return {"status": "no_asr", "credit_cost": cost, **none}
+        elif resp.status_code == 404:
+            return {"status": "no_asr", "credit_cost": cost, **none}
+        elif resp.status_code == 401:
+            raise ValueError("API key rejected (401). Check your .env file.")
+        elif resp.status_code == 402:
+            raise RuntimeError("Out of credits (402). Top up your KonbiniAPI account.")
+        else:
+            logger.warning(f"Unexpected {resp.status_code} on transcript {video_id}: {resp.text[:120]}")
+            return {"status": "error", "credit_cost": cost, **none}
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def vtt_to_text(vtt: str) -> str:
+    """Flatten WebVTT to plain text: drop the header, cue numbers and timestamp lines,
+    and collapse consecutive repeated subtitle lines."""
+    lines = []
+    for raw in (vtt or "").splitlines():
+        line = raw.strip()
+        if not line or line.upper().startswith("WEBVTT") or "-->" in line or line.isdigit():
+            continue
+        if not lines or lines[-1] != line:
+            lines.append(line)
+    return " ".join(lines).strip()
 
 def _extract_username(url: str) -> str:
     """Pull username from a TikTok profile URL like https://www.tiktok.com/@username"""
